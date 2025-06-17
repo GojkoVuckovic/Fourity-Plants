@@ -12,16 +12,17 @@
 		"typecheck": "tsc --noEmit"
 	},
 	"devDependencies": {
-		"sst": "ion",
-		"typescript": "^5.4.2",
-		"@types/node": "^20.x.x",
 		"@pulumi/aws": "^6.66.2",
-		"@pulumi/command": "^1.0.1",
 		"@pulumi/awsx": "^2.x.x",
-		"@pulumi/pulumi": "^3.146.0"
+		"@pulumi/command": "^1.0.1",
+		"@pulumi/pulumi": "^3.146.0",
+		"@types/node": "^20.x.x",
+		"sst": "ion",
+		"typescript": "^5.4.2"
 	},
 	"dependencies": {
 		"@aws-sdk/client-dynamodb": "^3.x.x",
+		"@aws-sdk/client-lambda": "^3.830.0",
 		"@aws-sdk/lib-dynamodb": "^3.x.x"
 	}
 }

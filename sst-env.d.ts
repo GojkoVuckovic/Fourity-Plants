@@ -5,30 +5,94 @@
 
 declare module "sst" {
   export interface Resource {
+    "Create-Plant": {
+      "name": string
+      "type": "sst.aws.Function"
+    }
     "Create-Plant-Type": {
       "name": string
       "type": "sst.aws.Function"
-      "url": string
+    }
+    "Create-Schedule": {
+      "name": string
+      "type": "sst.aws.Function"
+    }
+    "Create-Zone": {
+      "name": string
+      "type": "sst.aws.Function"
+    }
+    "Delete-Plant": {
+      "name": string
+      "type": "sst.aws.Function"
     }
     "Delete-Plant-Type": {
       "name": string
       "type": "sst.aws.Function"
+    }
+    "Delete-Zone": {
+      "name": string
+      "type": "sst.aws.Function"
+    }
+    "Dispatcher": {
+      "name": string
+      "type": "sst.aws.Function"
       "url": string
+    }
+    "Get-Employees": {
+      "name": string
+      "type": "sst.aws.Function"
+    }
+    "Get-Plant": {
+      "name": string
+      "type": "sst.aws.Function"
+    }
+    "Get-Plant-List": {
+      "name": string
+      "type": "sst.aws.Function"
+    }
+    "Get-Plant-Record-List": {
+      "name": string
+      "type": "sst.aws.Function"
     }
     "Get-Plant-Type": {
       "name": string
       "type": "sst.aws.Function"
-      "url": string
     }
     "Get-Plant-Type-List": {
       "name": string
       "type": "sst.aws.Function"
-      "url": string
+    }
+    "Get-Schedule": {
+      "name": string
+      "type": "sst.aws.Function"
+    }
+    "Get-Scoreboard": {
+      "name": string
+      "type": "sst.aws.Function"
+    }
+    "Get-Zone": {
+      "name": string
+      "type": "sst.aws.Function"
+    }
+    "Get-Zone-List": {
+      "name": string
+      "type": "sst.aws.Function"
+    }
+    "Update-Plant": {
+      "name": string
+      "type": "sst.aws.Function"
+    }
+    "Update-Plant-Record": {
+      "name": string
+      "type": "sst.aws.Function"
     }
     "Update-Plant-Type": {
       "name": string
       "type": "sst.aws.Function"
-      "url": string
+    }
+    "Update-Zone": {
+      "name": string
+      "type": "sst.aws.Function"
     }
   }
 }
