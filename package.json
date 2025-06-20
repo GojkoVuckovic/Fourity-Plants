@@ -17,8 +17,8 @@
 		"@pulumi/command": "^1.0.1",
 		"@pulumi/pulumi": "^3.146.0",
 		"@types/node": "^20.x.x",
-		"sst": "ion",
-		"typescript": "^5.4.2"
+		"sst": "3.17.6",
+		"typescript": "^5.8.3"
 	},
 	"dependencies": {
 		"@aws-sdk/client-dynamodb": "^3.x.x",

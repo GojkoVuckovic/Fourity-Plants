@@ -1,5 +1,9 @@
 /// <reference path="./.sst/platform/config.d.ts" />
 import { remote, types } from "@pulumi/command";
+import * as aws from "@pulumi/aws";
+import * as awsx from "@pulumi/awsx";
+import * as docker from "@pulumi/docker";
+import * as pulumi from "@pulumi/pulumi";
 
 export default $config({
 	app(input) {
@@ -8,16 +12,10 @@ export default $config({
 			removal: input?.stage === "production" ? "retain" : "remove",
 			protect: ["production"].includes(input?.stage),
 			home: "aws",
-			region: "us-east-1",
+			region: "eu-east-1",
 		};
 	},
 	async run() {
-		const aws = await import("@pulumi/aws");
-		const awsx = await import("@pulumi/awsx");
-		const docker = await import("@pulumi/docker");
-		const { remote, types } = await import("@pulumi/command");
-		const pulumi = await import("@pulumi/pulumi");
-
 		// const image = new awsx.ecr.Image("image", {
 		// 	repositoryUrl:
 		// 		"351931932329.dkr.ecr.eu-central-1.amazonaws.com/fourity/fourity-plants",
