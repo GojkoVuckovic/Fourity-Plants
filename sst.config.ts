@@ -70,7 +70,7 @@ export default $config({
 			link: [table],
 			url: true,
 			environment: {
-				table_NAME: table.name,
+				TABLE_NAME: table.name,
 			},
 		});
 	},

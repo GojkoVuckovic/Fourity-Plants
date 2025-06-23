@@ -1,11 +1,16 @@
-import { getFunc, putFunc, docClient } from "./utils";
+import { getFunc, putFunc, docClient, resolveCommand } from "./utils";
 import {
 	GetCommand,
 	PutCommand,
 	DeleteCommand,
 	ScanCommand,
+	DynamoDBDocumentClient,
 } from "@aws-sdk/lib-dynamodb";
-import { createRequestFail, createRequestSuccess } from "../requests";
+import {
+	createRequestFail,
+	createRequestSuccess,
+	RequestResult,
+} from "../requests";
 import {
 	CreatePlantRequest,
 	UpdatePlantRequest,
@@ -17,9 +22,30 @@ import {
 	Zone,
 } from "../types";
 
-const PLANT_TABLE_NAME: string = process.env.PLANT_TABLE_NAME || "";
-const PLANT_TYPE_TABLE_NAME: string = process.env.PLANT_TYPE_TABLE_NAME || "";
-const ZONE_TABLE_NAME: string = process.env.ZONE_TABLE_NAME || "";
+const TABLE_NAME = process.env.TABLE_NAME || "";
+
+export const plantService = (db: DynamoDBDocumentClient) => {
+	return {
+		async getPlant(
+			req: GetPlantRequest,
+		): Promise<RequestResult<"getPlant", Plant>> {
+			const command = new GetCommand({
+				TableName: TABLE_NAME,
+				Key: req.payload,
+			});
+			const result = await resolveCommand(command, db);
+			if (!result.success) {
+				return createRequestFail("getPlant")(result.code, result.message);
+			}
+			//TODO: Add parser for Plant so you can be sure it is a plant
+			return createRequestSuccess("getPlant")(
+				result.data,
+				result.code,
+				result.message,
+			);
+		},
+	};
+};
 
 export const createPlantRequestFunc = async (req: CreatePlantRequest) => {
 	try {

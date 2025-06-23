@@ -1,3 +1,5 @@
+import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
+import { DynamoDBDocumentClient } from "@aws-sdk/lib-dynamodb";
 import * as employee from "./employee.ts";
 import * as plant_record from "./plant_record.ts";
 import * as plant_type from "./plant_type.ts";
@@ -9,6 +11,9 @@ import { assertUnreachable } from "./utils.ts";
 import { Req } from "../types.ts";
 
 export const ProcessRequest = async (data: Req) => {
+	const client = new DynamoDBClient({});
+	const docClient = DynamoDBDocumentClient.from(client);
+	const plantServiceInstance = plant.plantService(docClient);
 	switch (data.command) {
 		case "createPlant":
 			return plant.createPlantRequestFunc(data);
@@ -17,7 +22,7 @@ export const ProcessRequest = async (data: Req) => {
 		case "deletePlant":
 			return plant.deletePlantRequestFunc(data);
 		case "getPlant":
-			return plant.getPlantRequestFunc(data);
+			return plantServiceInstance.getPlant(data);
 		case "getPlantList":
 			return plant.getPlantListRequestFunc(data);
 		case "createPlantType":

@@ -10,7 +10,9 @@ import {
 	createRequestSuccess,
 	RequestFail,
 } from "../requests";
+import { Command } from "@smithy/types";
 import { Req } from "../types";
+import { GetInputResult } from "@pulumi/aws/medialive";
 
 export const client = new DynamoDBClient({});
 export const docClient = DynamoDBDocumentClient.from(client);
@@ -59,3 +61,17 @@ export const assertUnreachable =
 	<const OP extends string>(requestId: OP) =>
 	(code: number, message: string): RequestFail<OP> =>
 		createRequestFail(requestId)(code, message);
+
+export const resolveCommand = async <
+	T extends Command<any, any, any, any, any>,
+>(
+	command: T,
+	docClient: DynamoDBDocumentClient,
+) => {
+	try {
+		const response = await docClient.send(command);
+		return createRequestSuccess("command")(response.Item, 200, "");
+	} catch (error: any) {
+		return createRequestFail("command")(500, error.message);
+	}
+};

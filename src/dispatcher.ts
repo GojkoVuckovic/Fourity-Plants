@@ -3,7 +3,7 @@ import {
 	APIGatewayProxyResult,
 	Context,
 } from "aws-lambda";
-import { ProcessRequest } from "./domain/index.ts";
+import { ProcessRequest } from "./service/index.ts";
 import { successResponse, errorResponse } from "./response.ts";
 import { createRequestFail, createRequestSuccess } from "./requests";
 import { Req } from "./types.ts";
