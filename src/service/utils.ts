@@ -1,8 +1,9 @@
-import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
+import { DynamoDBClient, ScanCommand } from "@aws-sdk/client-dynamodb";
 import {
 	PutCommand,
 	DynamoDBDocumentClient,
 	GetCommand,
+	DeleteCommand,
 } from "@aws-sdk/lib-dynamodb";
 import {
 	createRequestFail,

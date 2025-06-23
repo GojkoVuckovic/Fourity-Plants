@@ -13,6 +13,10 @@ export type RequestSuccess<OP extends string, T> = RequestCommon<OP> & {
 	data: T;
 };
 
+export type RequestResult<OP extends string, T> =
+	| RequestSuccess<OP, T>
+	| RequestFail<OP>;
+
 export const createRequestFail =
 	<const OP extends string>(requestName: OP) =>
 	(code: number, message: string): RequestFail<OP> => ({

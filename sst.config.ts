@@ -46,83 +46,31 @@ export default $config({
 		// 	{ dependsOn: image },
 		// );
 
-		const zone_table = new aws.dynamodb.Table("zone-table", {
-			name: "zone-table",
-			attributes: [{ name: "id", type: "N" }],
-			hashKey: "id",
-			billingMode: "PROVISIONED",
-			readCapacity: 5,
-			writeCapacity: 5,
-		});
-
-		const plant_type_table = new aws.dynamodb.Table("plant-type-table", {
-			name: "plant-type-table",
-			attributes: [{ name: "id", type: "N" }],
-			hashKey: "id",
-			billingMode: "PROVISIONED",
-			readCapacity: 5,
-			writeCapacity: 5,
-		});
-
-		const plant_table = new aws.dynamodb.Table("plant-table", {
-			name: "plant-table",
-			attributes: [
-				{ name: "id", type: "N" },
-				{ name: "zone_id", type: "N" },
-				{ name: "plant_type_id", type: "N" },
-			],
-			globalSecondaryIndexes: [
-				{
-					name: "zone_id_index",
-					hashKey: "zone_id",
-					projectionType: "ALL",
-					readCapacity: 5,
-					writeCapacity: 5,
+		const table = new sst.aws.Dynamo("Table", {
+			fields: {
+				PK: "string",
+				SK: "string",
+				type: "string",
+				GSK1PK: "string",
+				GSK1SK: "string",
+			},
+			primaryIndex: { hashKey: "PK", rangeKey: "SK" },
+			transform: {
+				table(args, opts, name) {
+					args.billingMode = "PROVISIONED";
+					args.readCapacity = 10;
+					args.writeCapacity = 10;
+					return undefined;
 				},
-				{
-					name: "plant_type_id_index",
-					hashKey: "plant_type_id",
-					projectionType: "ALL",
-					readCapacity: 5,
-					writeCapacity: 5,
-				},
-			],
-			hashKey: "id",
-			billingMode: "PROVISIONED",
-			readCapacity: 5,
-			writeCapacity: 5,
-		});
-
-		const plant_record_table = new aws.dynamodb.Table("plant-record-table", {
-			name: "plant-record-table",
-			attributes: [
-				{ name: "id", type: "N" },
-				{ name: "plantId", type: "N" },
-			],
-			globalSecondaryIndexes: [
-				{
-					name: "plantId-index",
-					hashKey: "plantId",
-					projectionType: "ALL",
-					readCapacity: 5,
-					writeCapacity: 5,
-				},
-			],
-			hashKey: "id",
-			billingMode: "PROVISIONED",
-			readCapacity: 5,
-			writeCapacity: 5,
+			},
 		});
 
 		const dispatcher = new sst.aws.Function("Dispatcher", {
 			handler: "./src/dispatcher.handler",
-			link: [plant_table, plant_type_table, zone_table, plant_record_table],
+			link: [table],
 			url: true,
 			environment: {
-				PLANT_TABLE_NAME: plant_table.name,
-				PLANT_TYPE_TABLE_NAME: plant_type_table.name,
-				ZONE_TABLE_NAME: zone_table.name,
-				PLANT_RECORD_TABLE_NAME: plant_record_table.name,
+				table_NAME: table.name,
 			},
 		});
 	},
