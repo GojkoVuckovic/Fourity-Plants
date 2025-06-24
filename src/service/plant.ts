@@ -44,6 +44,39 @@ export const plantService = (db: DynamoDBDocumentClient) => {
 				result.message,
 			);
 		},
+		async createPlant(
+			req: CreatePlantRequest,
+		): Promise<RequestResult<"createPlant", Plant>> {
+			const plant_type_get_command = new GetCommand({
+				TableName: TABLE_NAME,
+				Key: { id: req.payload.plant_type_id },
+			});
+			const plant_type_get_result = await resolveCommand(
+				plant_type_get_command,
+				db,
+			);
+			if (!plant_type_get_result.success) {
+				return createRequestFail("createPlant")(
+					plant_type_get_result.code,
+					plant_type_get_result.message,
+				);
+			}
+			const zone_get_command = new GetCommand({
+				TableName: TABLE_NAME,
+				Key: { id: req.payload.zone_id },
+			});
+			const zone_get_result = await resolveCommand(plant_type_get_command, db);
+			if (!zone_get_result.success) {
+				return createRequestFail("createPlant")(
+					zone_get_result.code,
+					zone_get_result.message,
+				);
+			}
+			const create_plant_command = new PutCommand({
+				TableName: TABLE_NAME,
+				Item: req.payload,
+			});
+		},
 	};
 };
 

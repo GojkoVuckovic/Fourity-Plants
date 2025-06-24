@@ -61,16 +61,14 @@ export const assertUnreachable =
 	<const OP extends string>(requestId: OP) =>
 	(code: number, message: string): RequestFail<OP> =>
 		createRequestFail(requestId)(code, message);
-
-export const resolveCommand = async <
-	T extends Command<any, any, any, any, any>,
->(
+type X = Parameters<DynamoDBDocumentClient["send"]>[0];
+export const resolveCommand = async <T extends X>(
 	command: T,
 	docClient: DynamoDBDocumentClient,
 ) => {
 	try {
 		const response = await docClient.send(command);
-		return createRequestSuccess("command")(response.Item, 200, "");
+		return createRequestSuccess("command")(response, 200, "");
 	} catch (error: any) {
 		return createRequestFail("command")(500, error.message);
 	}
