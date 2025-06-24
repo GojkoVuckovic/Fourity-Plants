@@ -1,4 +1,9 @@
-import { DynamoDBClient, ScanCommand } from "@aws-sdk/client-dynamodb";
+import {
+	DynamoDBClient,
+	ScanCommand,
+	ServiceInputTypes,
+	ServiceOutputTypes,
+} from "@aws-sdk/client-dynamodb";
 import {
 	PutCommand,
 	DynamoDBDocumentClient,
@@ -9,10 +14,11 @@ import {
 	createRequestFail,
 	createRequestSuccess,
 	RequestFail,
+	RequestResult,
 } from "../requests";
 import { Command } from "@smithy/types";
 import { Req } from "../types";
-import { GetInputResult } from "@pulumi/aws/medialive";
+import { GetInputResult, Input } from "@pulumi/aws/medialive";
 
 export const client = new DynamoDBClient({});
 export const docClient = DynamoDBDocumentClient.from(client);
@@ -61,15 +67,19 @@ export const assertUnreachable =
 	<const OP extends string>(requestId: OP) =>
 	(code: number, message: string): RequestFail<OP> =>
 		createRequestFail(requestId)(code, message);
-type X = Parameters<DynamoDBDocumentClient["send"]>[0];
-export const resolveCommand = async <T extends X>(
-	command: T,
-	docClient: DynamoDBDocumentClient,
-) => {
+
+export const processRequest = async <
+	OP extends string,
+	T,
+	U extends () => Promise<T>,
+>(
+	future: U,
+	cmdName: OP,
+): Promise<RequestResult<OP, T>> => {
 	try {
-		const response = await docClient.send(command);
-		return createRequestSuccess("command")(response, 200, "");
+		const result = await future();
+		return createRequestSuccess(cmdName)(result, 200, "successful");
 	} catch (error: any) {
-		return createRequestFail("command")(500, error.message);
+		return createRequestFail(cmdName)(500, error.message);
 	}
 };

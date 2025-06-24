@@ -1,4 +1,10 @@
-import { getFunc, putFunc, docClient, resolveCommand } from "./utils";
+import {
+	getFunc,
+	putFunc,
+	docClient,
+	resolveCommand,
+	processRequest,
+} from "./utils";
 import {
 	GetCommand,
 	PutCommand,
@@ -21,6 +27,8 @@ import {
 	Plant,
 	Zone,
 } from "../types";
+import { resolve } from "path";
+import { Update } from "@aws-sdk/client-dynamodb";
 
 const TABLE_NAME = process.env.TABLE_NAME || "";
 
@@ -29,203 +37,208 @@ export const plantService = (db: DynamoDBDocumentClient) => {
 		async getPlant(
 			req: GetPlantRequest,
 		): Promise<RequestResult<"getPlant", Plant>> {
-			const command = new GetCommand({
-				TableName: TABLE_NAME,
-				Key: req.payload,
-			});
-			const result = await resolveCommand(command, db);
-			if (!result.success) {
-				return createRequestFail("getPlant")(result.code, result.message);
-			}
-			//TODO: Add parser for Plant so you can be sure it is a plant
-			return createRequestSuccess("getPlant")(
-				result.data,
-				result.code,
-				result.message,
+			const get_plant_command = async () =>
+				await db.send(
+					new GetCommand({
+						TableName: TABLE_NAME,
+						Key: req.payload,
+					}),
+				);
+			const get_plant_result = await processRequest(
+				get_plant_command,
+				"getPlant",
 			);
+			//TODO:Create parsers after message
+			if (get_plant_result.success) {
+				const item = get_plant_result.data;
+			} else {
+				return get_plant_result;
+			}
 		},
 		async createPlant(
 			req: CreatePlantRequest,
 		): Promise<RequestResult<"createPlant", Plant>> {
-			const plant_type_get_command = new GetCommand({
-				TableName: TABLE_NAME,
-				Key: { id: req.payload.plant_type_id },
-			});
-			const plant_type_get_result = await resolveCommand(
-				plant_type_get_command,
-				db,
+			const get_plant_type_command = async () =>
+				await db.send(
+					new GetCommand({
+						TableName: TABLE_NAME,
+						Key: { id: req.payload.plant_type_id },
+					}),
+				);
+			const get_plant_type_result = await processRequest(
+				get_plant_type_command,
+				"createPlant",
 			);
-			if (!plant_type_get_result.success) {
-				return createRequestFail("createPlant")(
-					plant_type_get_result.code,
-					plant_type_get_result.message,
-				);
+			if (!get_plant_type_result.success) {
+				return get_plant_type_result;
 			}
-			const zone_get_command = new GetCommand({
-				TableName: TABLE_NAME,
-				Key: { id: req.payload.zone_id },
-			});
-			const zone_get_result = await resolveCommand(plant_type_get_command, db);
-			if (!zone_get_result.success) {
-				return createRequestFail("createPlant")(
-					zone_get_result.code,
-					zone_get_result.message,
+			const get_zone_command = async () =>
+				await db.send(
+					new GetCommand({
+						TableName: TABLE_NAME,
+						Key: { id: req.payload.zone_id },
+					}),
 				);
+			const get_zone_result = await processRequest(
+				get_zone_command,
+				"createPlant",
+			);
+			if (!get_zone_result.success) {
+				return get_zone_result;
 			}
-			const create_plant_command = new PutCommand({
-				TableName: TABLE_NAME,
-				Item: req.payload,
-			});
+			//TODO: Parse it so the item is valid for DB
+			const parsed_data = req.payload;
+			const create_plant_command = async () =>
+				await db.send(
+					new PutCommand({
+						TableName: TABLE_NAME,
+						Item: parsed_data,
+					}),
+				);
+			const create_plant_result = await processRequest(
+				create_plant_command,
+				"createPlant",
+			);
+			if (create_plant_result.success) {
+				return createRequestSuccess("createPlant")(
+					parsed_data,
+					create_plant_result.code,
+					create_plant_result.message,
+				);
+			} else {
+				return create_plant_result;
+			}
+		},
+		async updatePlant(
+			req: UpdatePlantRequest,
+		): Promise<RequestResult<"updatePlant", Plant>> {
+			const get_plant_command = async () =>
+				await db.send(
+					new GetCommand({
+						TableName: TABLE_NAME,
+						Key: { id: req.payload.id },
+					}),
+				);
+			const get_plant_result = await processRequest(
+				get_plant_command,
+				"updatePlant",
+			);
+			if (!get_plant_result.success) {
+				return get_plant_result;
+			}
+			const get_plant_type_command = async () =>
+				await db.send(
+					new GetCommand({
+						TableName: TABLE_NAME,
+						Key: { id: req.payload.plant_type_id },
+					}),
+				);
+			const get_plant_type_result = await processRequest(
+				get_plant_type_command,
+				"updatePlant",
+			);
+			if (!get_plant_type_result.success) {
+				return get_plant_type_result;
+			}
+			const get_zone_command = async () =>
+				await db.send(
+					new GetCommand({
+						TableName: TABLE_NAME,
+						Key: { id: req.payload.zone_id },
+					}),
+				);
+			const get_zone_result = await processRequest(
+				get_zone_command,
+				"updatePlant",
+			);
+			if (!get_zone_result.success) {
+				return get_zone_result;
+			}
+			const parsed_data = req.payload;
+			const update_plant_command = async () =>
+				await db.send(
+					new PutCommand({
+						TableName: TABLE_NAME,
+						Item: parsed_data,
+					}),
+				);
+			const update_plant_result = await processRequest(
+				update_plant_command,
+				"updatePlant",
+			);
+			if (update_plant_result.success) {
+				return createRequestSuccess("updatePlant")(
+					parsed_data,
+					update_plant_result.code,
+					update_plant_result.message,
+				);
+			} else {
+				return update_plant_result;
+			}
+		},
+		async deletePlant(
+			req: DeletePlantRequest,
+		): Promise<RequestResult<"deletePlant", any>> {
+			const get_plant_command = async () =>
+				await db.send(
+					new GetCommand({
+						TableName: TABLE_NAME,
+						Key: req.payload,
+					}),
+				);
+			const get_plant_result = await processRequest(
+				get_plant_command,
+				"deletePlant",
+			);
+			if (!get_plant_result.success) {
+				return get_plant_result;
+			}
+			const delete_plant_command = async () =>
+				await db.send(
+					new DeleteCommand({ TableName: TABLE_NAME, Key: req.payload }),
+				);
+			const delete_plant_result = await processRequest(
+				delete_plant_command,
+				"deletePlant",
+			);
+			return delete_plant_result;
+		},
+		async getPlantList(
+			req: GetPlantListRequest,
+		): Promise<RequestResult<"getPlantList", Plant[]>> {
+			const get_plant_list_command = async () =>
+				await db.send(
+					new ScanCommand({
+						TableName: TABLE_NAME,
+						FilterExpression: "#type = :plantType",
+						ExpressionAttributeNames: {
+							"#type": "type",
+						},
+						ExpressionAttributeValues: {
+							":plantType": "plant",
+						},
+					}),
+				);
+			const get_plant_list_result = await processRequest(
+				get_plant_list_command,
+				"getPlantList",
+			);
+			//TODO: Parse this into an array,ask how
+			const plants: Plant[] = [];
+			if (get_plant_list_result.success) {
+				const items = get_plant_list_result.data as any[];
+				for (const item of items) {
+					// TODO: Parse item to Plant type if needed
+					plants.push(item as Plant);
+				}
+				return createRequestSuccess("getPlantList")(
+					plants,
+					get_plant_list_result.code,
+					get_plant_list_result.message,
+				);
+			} else {
+				return get_plant_list_result;
+			}
 		},
 	};
-};
-
-export const createPlantRequestFunc = async (req: CreatePlantRequest) => {
-	try {
-		const plantTypeResult = await getFunc<PlantType>(
-			PLANT_TYPE_TABLE_NAME,
-			{
-				id: req.payload.plant_type_id,
-			},
-			req.command,
-		);
-		if (!plantTypeResult.success) {
-			return plantTypeResult;
-		}
-		if (req.payload.zone_id) {
-			const zoneResult = await getFunc<Zone>(
-				ZONE_TABLE_NAME,
-				{ id: req.payload.zone_id },
-				req.command,
-			);
-			if (!zoneResult.success) {
-				return zoneResult;
-			}
-		}
-		return await putFunc(PLANT_TABLE_NAME, req);
-	} catch (error: any) {
-		return createRequestFail(req.command)(500, error.message);
-	}
-};
-
-export const updatePlantRequestFunc = async (req: UpdatePlantRequest) => {
-	try {
-		if (!req.payload.id) {
-			return createRequestFail(req.command)(
-				400,
-				"Id is a required field for plant",
-			);
-		}
-		const plant_get_command = new GetCommand({
-			TableName: PLANT_TABLE_NAME,
-			Key: { id: req.payload.id },
-		});
-		const plant_response = await docClient.send(plant_get_command);
-		const plant = plant_response.Item as Plant | undefined;
-		if (!plant) {
-			return createRequestFail(req.command)(
-				404,
-				"Plant with id " + req.payload.id + " not found",
-			);
-		}
-
-		const plant_type_get_command = new GetCommand({
-			TableName: PLANT_TYPE_TABLE_NAME,
-			Key: { id: req.payload.plant_type_id },
-		});
-
-		const plant_type_response = await docClient.send(plant_type_get_command);
-		const plantType = plant_type_response.Item as PlantType | undefined;
-		if (!plantType) {
-			return createRequestFail(req.command)(
-				404,
-				"Plant type with id " + req.payload.plant_type_id + " not found",
-			);
-		}
-		const zone_command = new GetCommand({
-			TableName: ZONE_TABLE_NAME,
-			Key: { id: req.payload.zone_id },
-		});
-
-		const zone_response = await docClient.send(zone_command);
-		const Zone = zone_response.Item as Zone | undefined;
-
-		if (!Zone) {
-			return createRequestFail(req.command)(
-				404,
-				"Plant type with id " + req.payload.zone_id + " not found",
-			);
-		}
-		await docClient.send(
-			new PutCommand({
-				TableName: PLANT_TABLE_NAME,
-				Item: req.payload,
-			}),
-		);
-		return createRequestSuccess(req.command)(
-			req.payload,
-			201,
-			"Plant updated successfully",
-		);
-	} catch (error: any) {
-		return createRequestFail(req.command)(500, error.message);
-	}
-};
-
-export const deletePlantRequestFunc = async (req: DeletePlantRequest) => {
-	try {
-		const plant_get_command = new GetCommand({
-			TableName: PLANT_TABLE_NAME,
-			Key: { id: req.payload.id },
-		});
-		const plant_response = await docClient.send(plant_get_command);
-		const plant = plant_response.Item as Plant | undefined;
-		if (!plant) {
-			return createRequestFail(req.command)(
-				404,
-				"Plant with id " + req.payload.id + " not found",
-			);
-		}
-		await docClient.send(
-			new DeleteCommand({
-				TableName: PLANT_TABLE_NAME,
-				Key: req.payload,
-			}),
-		);
-		return createRequestSuccess(req.command)(
-			req.payload,
-			200,
-			"Plant deleted successfully",
-		);
-	} catch (error: any) {
-		return createRequestFail(req.command)(500, error.message);
-	}
-};
-
-export const getPlantRequestFunc = async (req: GetPlantRequest) => {
-	return await getFunc<Plant>(PLANT_TABLE_NAME, req.payload, req.command);
-};
-
-export const getPlantListRequestFunc = async (req: GetPlantListRequest) => {
-	try {
-		const command = new ScanCommand({
-			TableName: PLANT_TABLE_NAME,
-		});
-		const response = await docClient.send(command);
-		const Plants: Plant[] = (response.Items ?? []).map((PlantData: any) => {
-			return {
-				id: PlantData.id?.N || "",
-				zone_id: PlantData.zone_id?.N || "",
-				plant_type_id: PlantData.plant_type_id?.N || "",
-				name: PlantData.name?.S || "",
-				additionalInfo: PlantData.additionalInfo?.S || "",
-			};
-		});
-		if (Plants.length === 0) {
-			return createRequestFail(req.command)(404, "No plants found");
-		}
-		return createRequestSuccess(req.command)(Plants, 200, "");
-	} catch (error: any) {
-		return createRequestFail(req.command)(500, error.message);
-	}
 };
