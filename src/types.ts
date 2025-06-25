@@ -1,13 +1,13 @@
 export type Plant = {
-	id: number;
-	zone_id?: number;
-	plant_type_id: number;
+	uuid: string;
+	zone_uuid?: string | null;
+	plant_type_uuid: string;
 	name: string;
-	additionalInfo?: string;
+	additionalInfo?: string | null;
 };
 
 export type PlantType = {
-	id: number;
+	uuid: string;
 	name: string;
 	picture: string;
 	waterRequirement: string;
@@ -15,20 +15,20 @@ export type PlantType = {
 };
 
 export type Zone = {
-	id: number;
+	uuid: string;
 	employees: string[];
 	name: string;
 };
 
 export type PlantRecord = {
-	id: number;
-	plant_id: number;
+	uuid: string;
+	plant_uuid: string;
 	employee_name: string;
 	isWater: boolean;
 	isSun: boolean;
 	date: string;
 	resolved: boolean;
-	additionalInfo?: string;
+	additionalInfo?: string | null;
 };
 
 export type CreatePlantRequest = {
@@ -43,12 +43,12 @@ export type UpdatePlantRequest = {
 
 export type DeletePlantRequest = {
 	command: "deletePlant";
-	payload: { id: number };
+	payload: { uuid: string };
 };
 
 export type GetPlantRequest = {
 	command: "getPlant";
-	payload: { id: number };
+	payload: { uuid: string };
 };
 
 export type GetPlantListRequest = {
@@ -68,12 +68,12 @@ export type UpdatePlantTypeRequest = {
 
 export type DeletePlantTypeRequest = {
 	command: "deletePlantType";
-	payload: { id: number };
+	payload: { uuid: string };
 };
 
 export type GetPlantTypeRequest = {
 	command: "getPlantType";
-	payload: { id: number };
+	payload: { uuid: string };
 };
 
 export type GetPlantTypeListRequest = {
@@ -93,12 +93,12 @@ export type UpdateZoneRequest = {
 
 export type DeleteZoneRequest = {
 	command: "deleteZone";
-	payload: { id: number };
+	payload: { uuid: string };
 };
 
 export type GetZoneRequest = {
 	command: "getZone";
-	payload: { id: number };
+	payload: { uuid: string };
 };
 
 export type GetZoneListRequest = {
@@ -108,7 +108,7 @@ export type GetZoneListRequest = {
 
 export type UpdatePlantRecordRequest = {
 	command: "updatePlantRecord";
-	payload: { id: number; additionalInfo?: string };
+	payload: { uuid: string; additionalInfo?: string };
 };
 
 export type GetPlantRecordListRequest = {

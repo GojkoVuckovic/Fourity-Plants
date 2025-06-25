@@ -1,50 +1,57 @@
-import { getFunc, putFunc, docClient } from "./utils";
 import {
-	GetCommand,
-	PutCommand,
-	DeleteCommand,
-	ScanCommand,
-} from "@aws-sdk/lib-dynamodb";
-import { createRequestFail, createRequestSuccess } from "../requests";
+	TABLE_NAME,
+	processRequest,
+	parseData,
+	plantRecordArraySchema,
+} from "./utils";
+import { ScanCommand, DynamoDBDocumentClient } from "@aws-sdk/lib-dynamodb";
+import { createRequestFail, RequestResult } from "../requests";
 import {
 	CreateScheduleRequest,
 	GetScheduleRequest,
 	PlantRecord,
 } from "../types";
 
-const PLANT_RECORD_TABLE_NAME: string =
-	process.env.PLANT_RECORD_TABLE_NAME || "";
-
-export const createScheduleRequestFunc = async (req: CreateScheduleRequest) => {
-	return createRequestFail(req.command)(500, "NOT YET IMPLEMENTED");
-};
-
-export const getScheduleRequestFunc = async (req: GetScheduleRequest) => {
-	try {
-		const command = new ScanCommand({
-			TableName: PLANT_RECORD_TABLE_NAME,
-		});
-		const response = await docClient.send(command);
-		const PlantRecords: PlantRecord[] = (response.Items ?? []).map(
-			(PlantData: any) => {
-				return {
-					id: PlantData.id?.N || "",
-					plant_id: PlantData.plant_id?.N || "",
-					employee_name: PlantData.employee_name?.S || "",
-					isWater: PlantData.isWater?.B || "",
-					isSun: PlantData.isSun?.B || "",
-					date: PlantData.date?.S || "",
-					resolved: PlantData.resolved?.B || "",
-					additionalInfo: PlantData.additionalInfo?.S || "",
-				};
-			},
-		);
-		return createRequestSuccess(req.command)(
-			PlantRecords.filter((record) => record.resolved === false),
-			200,
-			"",
-		);
-	} catch (error: any) {
-		return createRequestFail(req.command)(500, error.message);
-	}
+export const scheduleService = (db: DynamoDBDocumentClient) => {
+	return {
+		async createSchedule(
+			req: CreateScheduleRequest,
+		): Promise<RequestResult<"createSchedule", string[]>> {
+			return createRequestFail(req.command)(500, "NOT YET IMPLEMENTED");
+		},
+		async getSchedule(
+			req: GetScheduleRequest,
+		): Promise<RequestResult<"getSchedule", PlantRecord[]>> {
+			const get_plant_record_list_command = async () =>
+				await db.send(
+					new ScanCommand({
+						TableName: TABLE_NAME,
+						FilterExpression:
+							"#type = :plant_type and #resolved = :resolved_val",
+						ExpressionAttributeNames: {
+							"#type": "type",
+							"#resolved": "resolved",
+						},
+						ExpressionAttributeValues: {
+							":plant_type": "plant_record",
+							":resolved_val": false,
+						},
+					}),
+				);
+			const get_plant_record_list_result = await processRequest(
+				get_plant_record_list_command,
+				"getSchedule",
+			);
+			if (get_plant_record_list_result.success) {
+				const parse_result = parseData(
+					get_plant_record_list_result.data,
+					"getSchedule",
+					plantRecordArraySchema,
+				);
+				return parse_result;
+			} else {
+				return get_plant_record_list_result;
+			}
+		},
+	};
 };

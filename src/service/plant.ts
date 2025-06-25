@@ -1,9 +1,10 @@
 import {
-	getFunc,
-	putFunc,
 	docClient,
-	resolveCommand,
+	parseData,
+	PlantArraySchema,
+	PlantSchema,
 	processRequest,
+	TABLE_NAME,
 } from "./utils";
 import {
 	GetCommand,
@@ -27,10 +28,6 @@ import {
 	Plant,
 	Zone,
 } from "../types";
-import { resolve } from "path";
-import { Update } from "@aws-sdk/client-dynamodb";
-
-const TABLE_NAME = process.env.TABLE_NAME || "";
 
 export const plantService = (db: DynamoDBDocumentClient) => {
 	return {
@@ -48,9 +45,11 @@ export const plantService = (db: DynamoDBDocumentClient) => {
 				get_plant_command,
 				"getPlant",
 			);
-			//TODO:Create parsers after message
+
 			if (get_plant_result.success) {
 				const item = get_plant_result.data;
+				const parser_result = parseData(item, "getPlant", PlantSchema);
+				return parser_result;
 			} else {
 				return get_plant_result;
 			}
@@ -62,7 +61,7 @@ export const plantService = (db: DynamoDBDocumentClient) => {
 				await db.send(
 					new GetCommand({
 						TableName: TABLE_NAME,
-						Key: { id: req.payload.plant_type_id },
+						Key: { uuid: req.payload.plant_type_uuid },
 					}),
 				);
 			const get_plant_type_result = await processRequest(
@@ -76,7 +75,7 @@ export const plantService = (db: DynamoDBDocumentClient) => {
 				await db.send(
 					new GetCommand({
 						TableName: TABLE_NAME,
-						Key: { id: req.payload.zone_id },
+						Key: { uuid: req.payload.zone_uuid },
 					}),
 				);
 			const get_zone_result = await processRequest(
@@ -86,7 +85,7 @@ export const plantService = (db: DynamoDBDocumentClient) => {
 			if (!get_zone_result.success) {
 				return get_zone_result;
 			}
-			//TODO: Parse it so the item is valid for DB
+			//TODO: Parse it so the item is valid for DB,check UUID generation
 			const parsed_data = req.payload;
 			const create_plant_command = async () =>
 				await db.send(
@@ -116,7 +115,7 @@ export const plantService = (db: DynamoDBDocumentClient) => {
 				await db.send(
 					new GetCommand({
 						TableName: TABLE_NAME,
-						Key: { id: req.payload.id },
+						Key: { uuid: req.payload.uuid },
 					}),
 				);
 			const get_plant_result = await processRequest(
@@ -130,7 +129,7 @@ export const plantService = (db: DynamoDBDocumentClient) => {
 				await db.send(
 					new GetCommand({
 						TableName: TABLE_NAME,
-						Key: { id: req.payload.plant_type_id },
+						Key: { uuid: req.payload.plant_type_uuid },
 					}),
 				);
 			const get_plant_type_result = await processRequest(
@@ -144,7 +143,7 @@ export const plantService = (db: DynamoDBDocumentClient) => {
 				await db.send(
 					new GetCommand({
 						TableName: TABLE_NAME,
-						Key: { id: req.payload.zone_id },
+						Key: { uuid: req.payload.zone_uuid },
 					}),
 				);
 			const get_zone_result = await processRequest(
@@ -223,19 +222,13 @@ export const plantService = (db: DynamoDBDocumentClient) => {
 				get_plant_list_command,
 				"getPlantList",
 			);
-			//TODO: Parse this into an array,ask how
-			const plants: Plant[] = [];
 			if (get_plant_list_result.success) {
-				const items = get_plant_list_result.data as any[];
-				for (const item of items) {
-					// TODO: Parse item to Plant type if needed
-					plants.push(item as Plant);
-				}
-				return createRequestSuccess("getPlantList")(
-					plants,
-					get_plant_list_result.code,
-					get_plant_list_result.message,
+				const parse_result = parseData(
+					get_plant_list_result.data,
+					"getPlantList",
+					PlantArraySchema,
 				);
+				return parse_result;
 			} else {
 				return get_plant_list_result;
 			}

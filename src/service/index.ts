@@ -14,49 +14,55 @@ export const ProcessRequest = async (data: Req) => {
 	const client = new DynamoDBClient({});
 	const docClient = DynamoDBDocumentClient.from(client);
 	const plantServiceInstance = plant.plantService(docClient);
+	const plantRecordServiceInstance = plant_record.plantRecordService(docClient);
+	const employeeServiceInstance = employee.employeeService(docClient);
+	const plantTypeServiceInstance = plant_type.plantTypeService(docClient);
+	const scheduleServiceInstance = schedule.scheduleService(docClient);
+	const scoreboardServiceInstance = scoreboard.scoreboardService(docClient);
+	const zoneServiceInstance = zone.ZoneService(docClient);
 	switch (data.command) {
 		case "createPlant":
-			return plant.createPlantRequestFunc(data);
+			return plantServiceInstance.createPlant(data);
 		case "updatePlant":
-			return plant.updatePlantRequestFunc(data);
+			return plantServiceInstance.updatePlant(data);
 		case "deletePlant":
-			return plant.deletePlantRequestFunc(data);
+			return plantServiceInstance.deletePlant(data);
 		case "getPlant":
 			return plantServiceInstance.getPlant(data);
 		case "getPlantList":
-			return plant.getPlantListRequestFunc(data);
+			return plantServiceInstance.getPlantList(data);
 		case "createPlantType":
-			return plant_type.createPlantTypeRequestFunc(data);
+			return plantTypeServiceInstance.createPlantType(data);
 		case "updatePlantType":
-			return plant_type.updatePlantTypeRequestFunc(data);
+			return plantTypeServiceInstance.updatePlantType(data);
 		case "deletePlantType":
-			return plant_type.deletePlantTypeRequestFunc(data);
+			return plantTypeServiceInstance.deletePlantType(data);
 		case "getPlantType":
-			return plant_type.getPlantTypeRequestFunc(data);
+			return plantTypeServiceInstance.getPlantType(data);
 		case "getPlantTypeList":
-			return plant_type.getPlantTypeListRequestFunc(data);
+			return plantTypeServiceInstance.getPlantTypeList(data);
 		case "createZone":
-			return zone.createZoneRequestFunc(data);
+			return zoneServiceInstance.createZone(data);
 		case "updateZone":
-			return zone.updateZoneRequestFunc(data);
+			return zoneServiceInstance.updateZone(data);
 		case "deleteZone":
-			return zone.deleteZoneRequestFunc(data);
+			return zoneServiceInstance.deleteZone(data);
 		case "getZone":
-			return zone.getZoneRequestFunc(data);
+			return zoneServiceInstance.getZone(data);
 		case "getZoneList":
-			return zone.getZoneListRequestFunc(data);
+			return zoneServiceInstance.getZoneList(data);
 		case "updatePlantRecord":
-			return plant_record.updatePlantRecordRequestFunc(data);
+			return plantRecordServiceInstance.updatePlantRecord(data);
 		case "getPlantRecordList":
-			return plant_record.getPlantRecordListRequestFunc(data);
+			return plantRecordServiceInstance.getPlantRecordList(data);
 		case "createSchedule":
-			return schedule.createScheduleRequestFunc(data);
+			return scheduleServiceInstance.createSchedule(data);
 		case "getSchedule":
-			return schedule.getScheduleRequestFunc(data);
+			return scheduleServiceInstance.getSchedule(data);
 		case "getScoreboard":
-			return scoreboard.getScoreboardRequestFunc(data);
+			return scoreboardServiceInstance.getScoreboard(data);
 		case "getEmployeeNames":
-			return employee.getEmployeeNamesRequestFunc(data);
+			return employeeServiceInstance.getEmployeeNames(data);
 		default:
 			return assertUnreachable("Unhandled command")(400, `Unhandled command`);
 	}

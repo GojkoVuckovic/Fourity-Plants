@@ -1,8 +1,17 @@
-import { createRequestFail, createRequestSuccess } from "../requests";
+import {
+	createRequestFail,
+	createRequestSuccess,
+	RequestResult,
+} from "../requests";
 import { GetEmployeeNamesRequest } from "../types";
+import { DynamoDBDocumentClient } from "@aws-sdk/lib-dynamodb";
 
-export const getEmployeeNamesRequestFunc = async (
-	req: GetEmployeeNamesRequest,
-) => {
-	return createRequestFail(req.command)(500, "NOT YET IMPLEMENTED");
+export const employeeService = (db: DynamoDBDocumentClient) => {
+	return {
+		async getEmployeeNames(
+			req: GetEmployeeNamesRequest,
+		): Promise<RequestResult<"getEmployeeNames", string[]>> {
+			return createRequestFail(req.command)(500, "NOT YET IMPLEMENTED");
+		},
+	};
 };

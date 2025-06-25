@@ -1,11 +1,18 @@
-import { getFunc, putFunc, docClient } from "./utils";
+import {
+	processRequest,
+	ZoneArraySchema,
+	ZoneSchema,
+	TABLE_NAME,
+	parseData,
+} from "./utils";
 import {
 	GetCommand,
 	PutCommand,
 	DeleteCommand,
 	ScanCommand,
+	DynamoDBDocumentClient,
 } from "@aws-sdk/lib-dynamodb";
-import { createRequestFail, createRequestSuccess } from "../requests";
+import { createRequestSuccess, RequestResult } from "../requests";
 import {
 	CreateZoneRequest,
 	UpdateZoneRequest,
@@ -15,102 +22,151 @@ import {
 	Zone,
 } from "../types";
 
-const ZONE_TABLE_NAME: string = process.env.ZONE_TABLE_NAME || "";
+export const ZoneService = (db: DynamoDBDocumentClient) => {
+	return {
+		async getZone(
+			req: GetZoneRequest,
+		): Promise<RequestResult<"getZone", Zone>> {
+			const get_zone_command = async () =>
+				await db.send(
+					new GetCommand({
+						TableName: TABLE_NAME,
+						Key: req.payload,
+					}),
+				);
+			const get_zone_result = await processRequest(get_zone_command, "getZone");
 
-export const createZoneRequestFunc = async (req: CreateZoneRequest) => {
-	return await putFunc(ZONE_TABLE_NAME, req);
-};
-
-export const updateZoneRequestFunc = async (req: UpdateZoneRequest) => {
-	try {
-		if (!req.payload.id) {
-			return createRequestFail(req.command)(
-				400,
-				"Id is a required field for zone",
+			if (get_zone_result.success) {
+				const item = get_zone_result.data;
+				const parser_result = parseData(item, "getZone", ZoneSchema);
+				return parser_result;
+			} else {
+				return get_zone_result;
+			}
+		},
+		async createZone(
+			req: CreateZoneRequest,
+		): Promise<RequestResult<"createZone", Zone>> {
+			//TODO: Parse it so the item is valid for DB,check UUID generation
+			const parsed_data = req.payload;
+			const create_zone_command = async () =>
+				await db.send(
+					new PutCommand({
+						TableName: TABLE_NAME,
+						Item: parsed_data,
+					}),
+				);
+			const create_zone_result = await processRequest(
+				create_zone_command,
+				"createZone",
 			);
-		}
-		const zone_get_command = new GetCommand({
-			TableName: ZONE_TABLE_NAME,
-			Key: { id: req.payload.id },
-		});
-		const zone_response = await docClient.send(zone_get_command);
-		const zone = zone_response.Item as Zone | undefined;
-		if (!zone) {
-			return createRequestFail(req.command)(
-				404,
-				"Zone with id " + req.payload.id + " not found",
+			if (create_zone_result.success) {
+				return createRequestSuccess("createZone")(
+					parsed_data,
+					create_zone_result.code,
+					create_zone_result.message,
+				);
+			} else {
+				return create_zone_result;
+			}
+		},
+		async updateZone(
+			req: UpdateZoneRequest,
+		): Promise<RequestResult<"updateZone", Zone>> {
+			const get_zone_command = async () =>
+				await db.send(
+					new GetCommand({
+						TableName: TABLE_NAME,
+						Key: { uuid: req.payload.uuid },
+					}),
+				);
+			const get_zone_result = await processRequest(
+				get_zone_command,
+				"updateZone",
 			);
-		}
-		await docClient.send(
-			new PutCommand({
-				TableName: ZONE_TABLE_NAME,
-				Item: req.payload,
-			}),
-		);
-		return createRequestSuccess(req.command)(
-			req.payload,
-			201,
-			"Zone updated successfully",
-		);
-	} catch (error: any) {
-		return createRequestFail(req.command)(500, error.message);
-	}
-};
-
-//TODO: Add implementaion of removing zone_id from all plants of this zone
-export const deleteZoneRequestFunc = async (req: DeleteZoneRequest) => {
-	try {
-		const zone_get_command = new GetCommand({
-			TableName: ZONE_TABLE_NAME,
-			Key: { id: req.payload.id },
-		});
-		const zone_response = await docClient.send(zone_get_command);
-		const zone = zone_response.Item as Zone | undefined;
-		if (!zone) {
-			return createRequestFail(req.command)(
-				404,
-				"Zone with id " + req.payload.id + " not found",
+			if (!get_zone_result.success) {
+				return get_zone_result;
+			}
+			//TODO: Parse it for DB
+			const parsed_data = req.payload;
+			const update_zone_command = async () =>
+				await db.send(
+					new PutCommand({
+						TableName: TABLE_NAME,
+						Item: parsed_data,
+					}),
+				);
+			const update_zone_result = await processRequest(
+				update_zone_command,
+				"updateZone",
 			);
-		}
-		await docClient.send(
-			new DeleteCommand({
-				TableName: ZONE_TABLE_NAME,
-				Key: req.payload,
-			}),
-		);
-		return createRequestSuccess(req.command)(
-			req.payload,
-			200,
-			"Zone deleted successfully",
-		);
-	} catch (error: any) {
-		return createRequestFail(req.command)(500, error.message);
-	}
-};
-
-export const getZoneRequestFunc = async (req: GetZoneRequest) => {
-	return await getFunc<Zone>(ZONE_TABLE_NAME, req.payload, req.command);
-};
-
-export const getZoneListRequestFunc = async (req: GetZoneListRequest) => {
-	try {
-		const command = new ScanCommand({
-			TableName: ZONE_TABLE_NAME,
-		});
-		const response = await docClient.send(command);
-		const zones: Zone[] = (response.Items ?? []).map((zoneData: any) => {
-			return {
-				id: zoneData.id?.N || "",
-				employees:
-					zoneData.employees?.L?.map((employee: any) => employee.S || "") || [],
-				name: zoneData.name?.S || "",
-			};
-		});
-		if (zones.length === 0) {
-			return createRequestFail(req.command)(404, "No zones found");
-		}
-		return createRequestSuccess(req.command)(zones, 200, "");
-	} catch (error: any) {
-		return createRequestFail(req.command)(500, error.message);
-	}
+			if (update_zone_result.success) {
+				return createRequestSuccess("updateZone")(
+					parsed_data,
+					update_zone_result.code,
+					update_zone_result.message,
+				);
+			} else {
+				return update_zone_result;
+			}
+		},
+		async deleteZone(
+			req: DeleteZoneRequest,
+		): Promise<RequestResult<"deleteZone", any>> {
+			const get_zone_command = async () =>
+				await db.send(
+					new GetCommand({
+						TableName: TABLE_NAME,
+						Key: req.payload,
+					}),
+				);
+			const get_zone_result = await processRequest(
+				get_zone_command,
+				"deleteZone",
+			);
+			if (!get_zone_result.success) {
+				return get_zone_result;
+			}
+			const delete_zone_command = async () =>
+				await db.send(
+					new DeleteCommand({ TableName: TABLE_NAME, Key: req.payload }),
+				);
+			const delete_zone_result = await processRequest(
+				delete_zone_command,
+				"deleteZone",
+			);
+			return delete_zone_result;
+		},
+		async getZoneList(
+			req: GetZoneListRequest,
+		): Promise<RequestResult<"getZoneList", Zone[]>> {
+			const get_zone_list_command = async () =>
+				await db.send(
+					new ScanCommand({
+						TableName: TABLE_NAME,
+						FilterExpression: "#type = :zone",
+						ExpressionAttributeNames: {
+							"#type": "type",
+						},
+						ExpressionAttributeValues: {
+							":zone": "zone",
+						},
+					}),
+				);
+			const get_zone_list_result = await processRequest(
+				get_zone_list_command,
+				"getZoneList",
+			);
+			if (get_zone_list_result.success) {
+				const parse_result = parseData(
+					get_zone_list_result.data,
+					"getZoneList",
+					ZoneArraySchema,
+				);
+				return parse_result;
+			} else {
+				return get_zone_list_result;
+			}
+		},
+	};
 };

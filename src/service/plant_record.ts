@@ -1,84 +1,112 @@
-import { getFunc, putFunc, docClient } from "./utils";
+import {
+	docClient,
+	parseData,
+	PlantRecordSchema,
+	plantRecordArraySchema,
+	processRequest,
+	TABLE_NAME,
+} from "./utils";
 import {
 	GetCommand,
 	PutCommand,
-	DeleteCommand,
 	ScanCommand,
+	DynamoDBDocumentClient,
 } from "@aws-sdk/lib-dynamodb";
-import { createRequestFail, createRequestSuccess } from "../requests";
+import {
+	createRequestFail,
+	createRequestSuccess,
+	RequestResult,
+} from "../requests";
 import {
 	UpdatePlantRecordRequest,
 	PlantRecord,
 	GetPlantRecordListRequest,
 } from "../types";
+import { uppercase } from "zod/v4";
 
 const PLANT_RECORD_TABLE_NAME: string =
 	process.env.PLANT_RECORD_TABLE_NAME || "";
 
-export const updatePlantRecordRequestFunc = async (
-	req: UpdatePlantRecordRequest,
-) => {
-	try {
-		if (!req.payload.id) {
-			return createRequestFail(req.command)(
-				400,
-				"Id is a required field for zone",
+export const plantRecordService = (db: DynamoDBDocumentClient) => {
+	return {
+		async updatePlantRecord(
+			req: UpdatePlantRecordRequest,
+		): Promise<RequestResult<"updatePlantRecord", PlantRecord>> {
+			const get_plant_record_command = async () =>
+				await db.send(
+					new GetCommand({
+						TableName: TABLE_NAME,
+						Key: { uuid: req.payload.uuid },
+					}),
+				);
+			const get_plant_record_result = await processRequest(
+				get_plant_record_command,
+				"updatePlantRecord",
 			);
-		}
-		const get_command = new GetCommand({
-			TableName: PLANT_RECORD_TABLE_NAME,
-			Key: { id: req.payload.id },
-		});
-		const response = await docClient.send(get_command);
-		const plant_record = response.Item as PlantRecord | undefined;
-		if (!plant_record) {
-			return createRequestFail(req.command)(
-				404,
-				"Plant record with id " + req.payload.id + " not found",
+			if (!get_plant_record_result.success) {
+				return get_plant_record_result;
+			} else {
+				const plant_record_parse = parseData(
+					get_plant_record_result,
+					"updatePlantRecord",
+					PlantRecordSchema,
+				);
+				if (plant_record_parse.success) {
+					const plant_record = plant_record_parse.data;
+					plant_record.resolved = true;
+					plant_record.additionalInfo = req.payload.additionalInfo;
+					const update_plant_record_command = async () =>
+						await db.send(
+							new PutCommand({ TableName: TABLE_NAME, Item: plant_record }),
+						);
+					const update_plant_record_result = await processRequest(
+						update_plant_record_command,
+						"updatePlantRecord",
+					);
+					if (update_plant_record_result.success) {
+						return createRequestSuccess("updatePlantRecord")(
+							plant_record,
+							200,
+							"updated successfully",
+						);
+					} else {
+						return update_plant_record_result;
+					}
+				} else {
+					return plant_record_parse;
+				}
+			}
+		},
+		async getPlantRecordList(
+			req: GetPlantRecordListRequest,
+		): Promise<RequestResult<"getPlantRecordList", PlantRecord[]>> {
+			const get_plant_record_list_command = async () =>
+				await db.send(
+					new ScanCommand({
+						TableName: TABLE_NAME,
+						FilterExpression: "#type = :plant_type",
+						ExpressionAttributeNames: {
+							"#type": "type",
+						},
+						ExpressionAttributeValues: {
+							":plant_type": "plant_record",
+						},
+					}),
+				);
+			const get_plant_record_list_result = await processRequest(
+				get_plant_record_list_command,
+				"getPlantRecordList",
 			);
-		}
-		plant_record.resolved = true;
-		plant_record.additionalInfo = req.payload.additionalInfo;
-		await docClient.send(
-			new PutCommand({
-				TableName: PLANT_RECORD_TABLE_NAME,
-				Item: plant_record,
-			}),
-		);
-		return createRequestSuccess(req.command)(
-			req.payload,
-			201,
-			"Plant record updated successfully",
-		);
-	} catch (error: any) {
-		return createRequestFail(req.command)(500, error.message);
-	}
-};
-
-export const getPlantRecordListRequestFunc = async (
-	req: GetPlantRecordListRequest,
-) => {
-	try {
-		const command = new ScanCommand({
-			TableName: PLANT_RECORD_TABLE_NAME,
-		});
-		const response = await docClient.send(command);
-		const PlantRecords: PlantRecord[] = (response.Items ?? []).map(
-			(PlantData: any) => {
-				return {
-					id: PlantData.id?.N || "",
-					plant_id: PlantData.plant_id?.N || "",
-					employee_name: PlantData.employee_name?.S || "",
-					isWater: PlantData.isWater?.B || "",
-					isSun: PlantData.isSun?.B || "",
-					date: PlantData.date?.S || "",
-					resolved: PlantData.resolved?.B || "",
-					additionalInfo: PlantData.additionalInfo?.S || "",
-				};
-			},
-		);
-		return createRequestSuccess(req.command)(PlantRecords, 200, "");
-	} catch (error: any) {
-		return createRequestFail(req.command)(500, error.message);
-	}
+			if (get_plant_record_list_result.success) {
+				const parse_result = parseData(
+					get_plant_record_list_result.data,
+					"getPlantRecordList",
+					plantRecordArraySchema,
+				);
+				return parse_result;
+			} else {
+				return get_plant_record_list_result;
+			}
+		},
+	};
 };
