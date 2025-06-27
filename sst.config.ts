@@ -12,7 +12,7 @@ export default $config({
 			removal: input?.stage === "production" ? "retain" : "remove",
 			protect: ["production"].includes(input?.stage),
 			home: "aws",
-			region: "eu-east-1",
+			region: "eu-central-1",
 		};
 	},
 	async run() {
@@ -49,19 +49,16 @@ export default $config({
 		const table = new sst.aws.Dynamo("Table", {
 			fields: {
 				PK: "string",
-				SK: "string",
+				uuid: "string",
 				type: "string",
-				GSK1PK: "string",
-				GSK1SK: "string",
+				employee_name: "string",
+				plant_uuid: "string",
 			},
-			primaryIndex: { hashKey: "PK", rangeKey: "SK" },
-			transform: {
-				table(args, opts, name) {
-					args.billingMode = "PROVISIONED";
-					args.readCapacity = 10;
-					args.writeCapacity = 10;
-					return undefined;
-				},
+			primaryIndex: { hashKey: "PK", rangeKey: "uuid" },
+			globalIndexes: {
+				TypeIndex: { hashKey: "type", rangeKey: "uuid" },
+				EmployeeIndex: { hashKey: "employee_name", rangeKey: "uuid" },
+				PlantIndex: { hashKey: "plant_uuid", rangeKey: "uuid" },
 			},
 		});
 

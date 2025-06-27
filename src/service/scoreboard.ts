@@ -1,22 +1,11 @@
 import {
-	docClient,
 	TABLE_NAME,
 	processRequest,
 	parseData,
 	plantRecordArraySchema,
 } from "./utils";
-import {
-	GetCommand,
-	PutCommand,
-	DeleteCommand,
-	ScanCommand,
-	DynamoDBDocumentClient,
-} from "@aws-sdk/lib-dynamodb";
-import {
-	createRequestFail,
-	createRequestSuccess,
-	RequestResult,
-} from "../requests";
+import { DynamoDBDocumentClient, QueryCommand } from "@aws-sdk/lib-dynamodb";
+import { createRequestSuccess, RequestResult } from "../requests";
 import { GetScoreboardRequest, PlantRecord } from "../types";
 
 const PLANT_RECORD_TABLE_NAME: string =
@@ -29,26 +18,30 @@ export const scoreboardService = (db: DynamoDBDocumentClient) => {
 		): Promise<
 			RequestResult<"getScoreboard", { [employee_name: string]: number }>
 		> {
-			const get_plant_record_list_command = async () =>
-				await db.send(
-					new ScanCommand({
+			const get_plant_record_list_command = async () => {
+				const { Items } = await db.send(
+					new QueryCommand({
 						TableName: TABLE_NAME,
-						FilterExpression: "#type = :plant_type",
+						IndexName: "TypeIndex",
+						KeyConditionExpression: "#typeAttr = :typeValue",
 						ExpressionAttributeNames: {
-							"#type": "type",
+							"#typeAttr": "type",
 						},
 						ExpressionAttributeValues: {
-							":plant_type": "plant_record",
+							":typeValue": { S: "PLANT_RECORD" },
 						},
 					}),
 				);
+				return Items;
+			};
 			const get_plant_record_list_result = await processRequest(
 				get_plant_record_list_command,
 				"getScoreboard",
 			);
 			if (get_plant_record_list_result.success) {
+				const parse_data = [get_plant_record_list_result.data];
 				const parse_result = parseData(
-					get_plant_record_list_result.data,
+					parse_data,
 					"getScoreboard",
 					plantRecordArraySchema,
 				);

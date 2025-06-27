@@ -4,7 +4,7 @@ import {
 	parseData,
 	plantRecordArraySchema,
 } from "./utils";
-import { ScanCommand, DynamoDBDocumentClient } from "@aws-sdk/lib-dynamodb";
+import { DynamoDBDocumentClient, QueryCommand } from "@aws-sdk/lib-dynamodb";
 import { createRequestFail, RequestResult } from "../requests";
 import {
 	CreateScheduleRequest,
@@ -22,29 +22,30 @@ export const scheduleService = (db: DynamoDBDocumentClient) => {
 		async getSchedule(
 			req: GetScheduleRequest,
 		): Promise<RequestResult<"getSchedule", PlantRecord[]>> {
-			const get_plant_record_list_command = async () =>
-				await db.send(
-					new ScanCommand({
+			const get_plant_record_list_command = async () => {
+				const { Items } = await db.send(
+					new QueryCommand({
 						TableName: TABLE_NAME,
-						FilterExpression:
-							"#type = :plant_type and #resolved = :resolved_val",
+						IndexName: "TypeIndex",
+						KeyConditionExpression: "#typeAttr = :typeValue",
 						ExpressionAttributeNames: {
-							"#type": "type",
-							"#resolved": "resolved",
+							"#typeAttr": "type",
 						},
 						ExpressionAttributeValues: {
-							":plant_type": "plant_record",
-							":resolved_val": false,
+							":typeValue": { S: "PLANT_RECORD" },
 						},
 					}),
 				);
+				return Items;
+			};
 			const get_plant_record_list_result = await processRequest(
 				get_plant_record_list_command,
 				"getSchedule",
 			);
 			if (get_plant_record_list_result.success) {
+				const parse_data = [get_plant_record_list_result.data];
 				const parse_result = parseData(
-					get_plant_record_list_result.data,
+					parse_data,
 					"getSchedule",
 					plantRecordArraySchema,
 				);

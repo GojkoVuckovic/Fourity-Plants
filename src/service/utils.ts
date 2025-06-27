@@ -58,16 +58,45 @@ export const PlantSchema = z.object({
 		.optional(),
 });
 
+export const PlantDTOSchema = z.object({
+	zone_uuid: z
+		.string()
+		.uuid("Zone UUID must be a valid UUID string")
+		.nullable()
+		.optional(),
+	plant_type_uuid: z
+		.string()
+		.uuid("Plant Type UUID must be a valid UUID string"),
+	name: z.string().min(1, "Plant name cannot be empty"),
+	additionalInfo: z
+		.string()
+		.min(1, "Additional info cannot be empty if present")
+		.nullable()
+		.optional(),
+});
+
 export const PlantTypeSchema = z.object({
 	uuid: z.string().uuid(),
 	name: z.string().min(1),
-	picture: z.string().url("Picture must be a valid URL"),
+	picture: z.string().min(1),
+	waterRequirement: z.string().min(1),
+	sunRequirement: z.string().min(1),
+});
+
+export const PlantTypeDTOSchema = z.object({
+	name: z.string().min(1),
+	picture: z.string().min(1),
 	waterRequirement: z.string().min(1),
 	sunRequirement: z.string().min(1),
 });
 
 export const ZoneSchema = z.object({
 	uuid: z.string().uuid(),
+	employees: z.array(z.string().min(1)),
+	name: z.string().min(1),
+});
+
+export const ZoneDTOSchema = z.object({
 	employees: z.array(z.string().min(1)),
 	name: z.string().min(1),
 });

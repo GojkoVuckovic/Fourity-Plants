@@ -25,6 +25,7 @@
 		"@aws-sdk/client-lambda": "^3.830.0",
 		"@aws-sdk/lib-dynamodb": "^3.x.x",
 		"@smithy/types": "^4.3.1",
+		"uuid": "^11.1.0",
 		"zod": "^3.25.67"
 	}
 }
