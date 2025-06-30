@@ -11,9 +11,7 @@ import {
 	RequestFail,
 	RequestResult,
 } from "../requests";
-import { Plant, Req } from "../types";
 import { z } from "zod";
-import { create } from "domain";
 
 export const client = new DynamoDBClient({});
 export const docClient = DynamoDBDocumentClient.from(client);
@@ -40,8 +38,14 @@ export const processRequest = async <
 	}
 };
 
-export const PlantSchema = z.object({
-	uuid: z.string().uuid("Plant UUID must be a valid UUID string"),
+export const BaseItemSchema = z.object({
+	PK: z.string(),
+	uuid: z.string().uuid(),
+	type: z.string(),
+	GSI: z.string(),
+});
+
+export const PlantDataSchema = z.object({
 	zone_uuid: z
 		.string()
 		.uuid("Zone UUID must be a valid UUID string")
@@ -59,24 +63,11 @@ export const PlantSchema = z.object({
 });
 
 export const PlantDTOSchema = z.object({
-	zone_uuid: z
-		.string()
-		.uuid("Zone UUID must be a valid UUID string")
-		.nullable()
-		.optional(),
-	plant_type_uuid: z
-		.string()
-		.uuid("Plant Type UUID must be a valid UUID string"),
-	name: z.string().min(1, "Plant name cannot be empty"),
-	additionalInfo: z
-		.string()
-		.min(1, "Additional info cannot be empty if present")
-		.nullable()
-		.optional(),
+	uuid: z.string().uuid(),
+	data: PlantDataSchema,
 });
 
-export const PlantTypeSchema = z.object({
-	uuid: z.string().uuid(),
+export const PlantTypeDataSchema = z.object({
 	name: z.string().min(1),
 	picture: z.string().min(1),
 	waterRequirement: z.string().min(1),
@@ -84,25 +75,21 @@ export const PlantTypeSchema = z.object({
 });
 
 export const PlantTypeDTOSchema = z.object({
-	name: z.string().min(1),
-	picture: z.string().min(1),
-	waterRequirement: z.string().min(1),
-	sunRequirement: z.string().min(1),
+	uuid: z.string().uuid(),
+	data: PlantTypeDataSchema,
 });
 
-export const ZoneSchema = z.object({
-	uuid: z.string().uuid(),
+export const ZoneDataSchema = z.object({
 	employees: z.array(z.string().min(1)),
 	name: z.string().min(1),
 });
 
 export const ZoneDTOSchema = z.object({
-	employees: z.array(z.string().min(1)),
-	name: z.string().min(1),
+	uuid: z.string().uuid(),
+	data: ZoneDataSchema,
 });
 
-export const PlantRecordSchema = z.object({
-	uuid: z.string().uuid(),
+export const PlantRecordDataSchema = z.object({
 	plant_uuid: z.string().uuid(),
 	employee_name: z.string().min(1),
 	isWater: z.boolean(),
@@ -112,10 +99,35 @@ export const PlantRecordSchema = z.object({
 	additionalInfo: z.string().min(1).nullable().optional(),
 });
 
-export const PlantArraySchema = z.array(PlantSchema);
-export const PlantTypeArraySchema = z.array(PlantTypeSchema);
-export const ZoneArraySchema = z.array(ZoneSchema);
-export const plantRecordArraySchema = z.array(PlantRecordSchema);
+export const PlantRecordDTOSchema = z.object({
+	uuid: z.string().uuid(),
+	data: PlantRecordDataSchema,
+});
+
+export const PlantSchema = BaseItemSchema.extend({
+	type: z.literal("PLANT"),
+	data: PlantDataSchema,
+});
+
+export const PlantTypeSchema = BaseItemSchema.extend({
+	type: z.literal("PLANT_TYPE"),
+	data: PlantTypeDataSchema,
+});
+
+export const ZoneSchema = BaseItemSchema.extend({
+	type: z.literal("ZONE"),
+	data: ZoneDataSchema,
+});
+
+export const PlantRecordSchema = BaseItemSchema.extend({
+	type: z.literal("PLANT_RECORD"),
+	data: PlantRecordDataSchema,
+});
+
+export const PlantArraySchema = z.array(PlantDTOSchema);
+export const PlantTypeArraySchema = z.array(PlantTypeDTOSchema);
+export const ZoneArraySchema = z.array(ZoneDTOSchema);
+export const plantRecordArraySchema = z.array(PlantRecordDTOSchema);
 
 export const parseData = <T, OP extends string>(
 	rawData: unknown,

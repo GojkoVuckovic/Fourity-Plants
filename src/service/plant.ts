@@ -112,10 +112,10 @@ export const plantService = (db: DynamoDBDocumentClient) => {
 					PK: `PLANT#${plant_uuid}`,
 					uuid: plant_uuid,
 					type: "PLANT",
-					plant_type_uuid: parser_result.data.plant_type_uuid,
-					name: parser_result.data.name,
-					zone_uuid: parser_result.data.zone_uuid,
-					additionalInfo: parser_result.data.additionalInfo,
+					plant_type_uuid: parser_result.data.data.plant_type_uuid,
+					name: parser_result.data.data.name,
+					zone_uuid: parser_result.data.data.zone_uuid,
+					additionalInfo: parser_result.data.data.additionalInfo,
 				};
 				const create_plant_command = async () =>
 					await db.send(
@@ -130,7 +130,7 @@ export const plantService = (db: DynamoDBDocumentClient) => {
 				);
 				if (create_plant_result.success) {
 					return createRequestSuccess("createPlant")(
-						parser_result.data,
+						parser_result.data.data,
 						create_plant_result.code,
 						create_plant_result.message,
 					);

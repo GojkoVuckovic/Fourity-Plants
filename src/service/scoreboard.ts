@@ -49,11 +49,11 @@ export const scoreboardService = (db: DynamoDBDocumentClient) => {
 					const plant_records = parse_result.data;
 					const scoreboard: { [employee_name: string]: number } = {};
 					for (const record of plant_records) {
-						if (record.resolved) {
-							if (scoreboard[record.employee_name]) {
-								scoreboard[record.employee_name]++;
+						if (record.data.resolved) {
+							if (scoreboard[record.data.employee_name]) {
+								scoreboard[record.data.employee_name]++;
 							} else {
-								scoreboard[record.employee_name] = 1;
+								scoreboard[record.data.employee_name] = 1;
 							}
 						}
 					}

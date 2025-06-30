@@ -51,14 +51,12 @@ export default $config({
 				PK: "string",
 				uuid: "string",
 				type: "string",
-				employee_name: "string",
-				plant_uuid: "string",
+				GSI: "string",
 			},
 			primaryIndex: { hashKey: "PK", rangeKey: "uuid" },
 			globalIndexes: {
 				TypeIndex: { hashKey: "type", rangeKey: "uuid" },
-				EmployeeIndex: { hashKey: "employee_name", rangeKey: "uuid" },
-				PlantIndex: { hashKey: "plant_uuid", rangeKey: "uuid" },
+				GSIndex: { hashKey: "GSI", rangeKey: "uuid" },
 			},
 		});
 

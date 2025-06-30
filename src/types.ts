@@ -1,9 +1,11 @@
 export type Plant = {
 	uuid: string;
-	zone_uuid?: string | null;
-	plant_type_uuid: string;
-	name: string;
-	additionalInfo?: string | null;
+	data: {
+		zone_uuid?: string | null;
+		plant_type_uuid: string;
+		name: string;
+		additionalInfo?: string | null;
+	};
 };
 
 export type CreatePlantDTO = {
@@ -15,10 +17,12 @@ export type CreatePlantDTO = {
 
 export type PlantType = {
 	uuid: string;
-	name: string;
-	picture: string;
-	waterRequirement: string;
-	sunRequirement: string;
+	data: {
+		name: string;
+		picture: string;
+		waterRequirement: string;
+		sunRequirement: string;
+	};
 };
 
 export type CreatePlantTypeDTO = {
@@ -30,8 +34,7 @@ export type CreatePlantTypeDTO = {
 
 export type Zone = {
 	uuid: string;
-	employees: string[];
-	name: string;
+	data: { employees: string[]; name: string };
 };
 
 export type CreateZoneDTO = {
@@ -41,13 +44,15 @@ export type CreateZoneDTO = {
 
 export type PlantRecord = {
 	uuid: string;
-	plant_uuid: string;
-	employee_name: string;
-	isWater: boolean;
-	isSun: boolean;
-	date: string;
-	resolved: boolean;
-	additionalInfo?: string | null;
+	data: {
+		plant_uuid: string;
+		employee_name: string;
+		isWater: boolean;
+		isSun: boolean;
+		date: string;
+		resolved: boolean;
+		additionalInfo?: string | null;
+	};
 };
 
 export type CreatePlantRequest = {

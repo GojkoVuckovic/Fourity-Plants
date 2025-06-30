@@ -63,8 +63,8 @@ export const ZoneService = (db: DynamoDBDocumentClient) => {
 					PK: `ZONE#${zone_uuid}`,
 					uuid: zone_uuid,
 					type: "ZONE",
-					name: parser_result.data.name,
-					employees: parser_result.data.employees,
+					name: parser_result.data.data.name,
+					employees: parser_result.data.data.employees,
 				};
 				const create_zone_command = async () =>
 					await db.send(
@@ -79,7 +79,7 @@ export const ZoneService = (db: DynamoDBDocumentClient) => {
 				);
 				if (create_zone_result.success) {
 					return createRequestSuccess("createZone")(
-						parser_result.data,
+						parser_result.data.data,
 						create_zone_result.code,
 						create_zone_result.message,
 					);
@@ -119,8 +119,8 @@ export const ZoneService = (db: DynamoDBDocumentClient) => {
 					PK: `ZONE#${parser_result.data.uuid}`,
 					uuid: parser_result.data.uuid,
 					type: "ZONE",
-					name: parser_result.data.name,
-					employees: parser_result.data.employees,
+					name: parser_result.data.data.name,
+					employees: parser_result.data.data.employees,
 				};
 				const update_zone_command = async () =>
 					await db.send(
