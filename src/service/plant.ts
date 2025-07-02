@@ -1,11 +1,4 @@
-import {
-  parseData,
-  PlantArraySchema,
-  PlantDTOSchema,
-  PlantSchema,
-  processRequest,
-  TABLE_NAME,
-} from "./utils";
+import { parseData, processRequest, TABLE_NAME, BaseItemSchema } from "./utils";
 import {
   GetCommand,
   PutCommand,
@@ -30,6 +23,31 @@ import {
 } from "../types";
 
 import { v4 as uuidv4 } from "uuid";
+import { z } from "zod";
+
+export const PlantDataSchema = z.object({
+  zoneUuid: z.string().uuid().nullable().optional(),
+  plantTypeUuid: z.string().uuid(),
+  name: z.string().min(1),
+  additionalInfo: z.string().min(1).nullable().optional(),
+});
+
+export const PlantSchema = BaseItemSchema.extend({
+  type: z.literal("PLANT"),
+  data: PlantDataSchema,
+});
+
+export const PlantDtoSchema = PlantSchema.transform((plantEntry) => {
+  const { SK, data } = plantEntry;
+  return {
+    SK,
+    ...data,
+  };
+});
+
+export const PlantDtoArraySchema = z.array(PlantDtoSchema);
+
+export const PlantArraySchema = z.array(PlantSchema);
 
 export const plantService = (db: DynamoDBDocumentClient) => {
   return {

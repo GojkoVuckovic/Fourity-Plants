@@ -13,9 +13,7 @@ import {
 } from "../requests";
 import { z } from "zod";
 
-export const client = new DynamoDBClient({});
-export const docClient = DynamoDBDocumentClient.from(client);
-export const TABLE_NAME = process.env.TABLE_NAME || "";
+export const TABLE_NAME = process.env.TABLE_NAME || "Table";
 
 export const assertUnreachable =
   <const OP extends string>(requestId: OP) =>
@@ -43,74 +41,8 @@ export const BaseItemSchema = z.object({
   SK: z.string().uuid(),
   type: z.string(),
   GSI: z.string(),
+  GSI2: z.string(),
 });
-
-export const PlantDataSchema = z.object({
-  zone_uuid: z.string().uuid().nullable().optional(),
-  plant_type_uuid: z.string().uuid(),
-  name: z.string().min(1),
-  additionalInfo: z.string().min(1).nullable().optional(),
-});
-
-export const ZoneDataSchema = z.object({
-  employees: z.array(z.string().min(1)),
-  name: z.string().min(1),
-});
-
-export const PlantRecordDataSchema = z.object({
-  plant_uuid: z.string().uuid(),
-  employee_name: z.string().min(1),
-  isWater: z.boolean(),
-  isSun: z.boolean(),
-  date: z.string().datetime("Date must be a valid ISO 8601 string"),
-  resolved: z.boolean(),
-  additionalInfo: z.string().min(1).nullable().optional(),
-});
-
-export const PlantSchema = BaseItemSchema.extend({
-  type: z.literal("PLANT"),
-  data: PlantDataSchema,
-});
-
-export const ZoneSchema = BaseItemSchema.extend({
-  type: z.literal("ZONE"),
-  data: ZoneDataSchema,
-});
-
-export const PlantRecordSchema = BaseItemSchema.extend({
-  type: z.literal("PLANT_RECORD"),
-  data: PlantRecordDataSchema,
-});
-
-export const PlantDTOSchema = PlantSchema.transform((plantEntry) => {
-  const { SK, data } = plantEntry;
-  return {
-    SK,
-    ...data,
-  };
-});
-
-export const ZoneDTOSchema = ZoneSchema.transform((zoneEntry) => {
-  const { SK, data } = zoneEntry;
-  return {
-    SK,
-    ...data,
-  };
-});
-
-export const PlantRecordDTOSchema = PlantRecordSchema.transform(
-  (plantRecordEntry) => {
-    const { SK, data } = plantRecordEntry;
-    return {
-      SK,
-      ...data,
-    };
-  },
-);
-
-export const PlantArraySchema = z.array(PlantDTOSchema);
-export const ZoneArraySchema = z.array(ZoneDTOSchema);
-export const plantRecordArraySchema = z.array(PlantRecordDTOSchema);
 
 export const parseData = <
   OP extends string,

@@ -1,34 +1,23 @@
-export type Plant = {
-  uuid: string;
-  data: {
-    zone_uuid?: string | null;
-    plant_type_uuid: string;
-    name: string;
-    additionalInfo?: string | null;
-  };
-};
+import { z } from "zod";
+import {
+  PlantTypeDataSchema,
+  PlantTypeSchema,
+  PlantTypeDtoSchema,
+} from "./service/plant_type";
+import { PlantDataSchema, PlantSchema, PlantDtoSchema } from "./service/plant";
+import { ZoneDataSchema, ZoneSchema, ZoneDTOSchema } from "./service/zone";
+import {
+  PlantRecordDataSchema,
+  PlantRecordSchema,
+  PlantRecordDTOSchema,
+} from "./service/plant_record";
 
-export type CreatePlantDTO = {
-  zone_uuid?: string | null;
-  plant_type_uuid: string;
-  name: string;
-  additionalInfo?: string | null;
-};
-
-export type PlantType = {
-  uuid: string;
-  name: string;
-  picture: string;
-  waterRequirement: string;
-  sunRequirement: string;
-};
-
-export type CreatePlantTypeDTO = {
-  name: string;
-  picture: string;
-  waterRequirement: string;
-  sunRequirement: string;
-};
+export type CreatePlantTypeDTO = z.infer<typeof PlantTypeDataSchema>;
+export type PlantTypeDatabase = z.infer<typeof PlantTypeSchema>;
+export type PlantType = z.infer<typeof PlantTypeDtoSchema>;
+export type CreatePlantDTO = z.infer<typeof PlantDataSchema>;
+export type PlantDatabase = z.infer<typeof PlantSchema>;
+export type Plant = z.infer<typeof PlantDtoSchema>;
 
 export type Zone = {
   uuid: string;
@@ -195,29 +184,6 @@ export type Req =
   | ScheduleRequests
   | ScoreboardRequests
   | ZoneRequests;
-
-export type PlantDatabase = {
-  PK: string;
-  uuid: string;
-  type: "PLANT";
-  plant_type_uuid: string;
-  name: string;
-  zone_uuid?: string | null;
-  additionalInfo?: string | null;
-};
-
-export type PlantTypeDatabase = {
-  PK: string;
-  SK: string;
-  type: "PLANT_TYPE";
-  GSI: string;
-  data: {
-    name: string;
-    picture: string;
-    waterRequirement: string;
-    sunRequirement: string;
-  };
-};
 
 export type ZoneDatabase = {
   PK: string;

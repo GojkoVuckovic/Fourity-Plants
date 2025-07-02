@@ -52,6 +52,7 @@ export default $config({
         SK: "string",
         type: "string",
         GSI: "string",
+        GSI2: "string",
       },
       primaryIndex: { hashKey: "PK", rangeKey: "uuid" },
       globalIndexes: {

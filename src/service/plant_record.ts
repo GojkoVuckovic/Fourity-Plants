@@ -1,11 +1,4 @@
-import {
-  docClient,
-  parseData,
-  PlantRecordSchema,
-  plantRecordArraySchema,
-  processRequest,
-  TABLE_NAME,
-} from "./utils";
+import { parseData, processRequest, TABLE_NAME, BaseItemSchema } from "./utils";
 import {
   GetCommand,
   PutCommand,
@@ -19,6 +12,34 @@ import {
   GetPlantRecordListRequest,
   PlantRecordDatabase,
 } from "../types";
+import { z } from "zod";
+
+export const PlantRecordDataSchema = z.object({
+  plant_uuid: z.string().uuid(),
+  employee_name: z.string().min(1),
+  isWater: z.boolean(),
+  isSun: z.boolean(),
+  date: z.string().datetime("Date must be a valid ISO 8601 string"),
+  resolved: z.boolean(),
+  additionalInfo: z.string().min(1).nullable().optional(),
+});
+
+export const PlantRecordSchema = BaseItemSchema.extend({
+  type: z.literal("PLANT_RECORD"),
+  data: PlantRecordDataSchema,
+});
+
+export const PlantRecordDtoSchema = PlantRecordSchema.transform(
+  (plantRecordEntry) => {
+    const { SK, data } = plantRecordEntry;
+    return {
+      SK,
+      ...data,
+    };
+  },
+);
+
+export const plantRecordArraySchema = z.array(PlantRecordDtoSchema);
 
 export const plantRecordService = (db: DynamoDBDocumentClient) => {
   return {
