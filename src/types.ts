@@ -3,44 +3,29 @@ import {
   PlantTypeDataSchema,
   PlantTypeSchema,
   PlantTypeDtoSchema,
+  PlantTypeDatabase,
+  PlantType,
+  CreatePlantTypeDto,
 } from "./service/plant_type";
 import { PlantDataSchema, PlantSchema, PlantDtoSchema } from "./service/plant";
-import { ZoneDataSchema, ZoneSchema, ZoneDTOSchema } from "./service/zone";
+import { ZoneDataSchema, ZoneSchema, ZoneDtoSchema } from "./service/zone";
 import {
   PlantRecordDataSchema,
   PlantRecordSchema,
-  PlantRecordDTOSchema,
+  PlantRecordDtoSchema,
 } from "./service/plant_record";
 
-export type CreatePlantTypeDTO = z.infer<typeof PlantTypeDataSchema>;
-export type PlantTypeDatabase = z.infer<typeof PlantTypeSchema>;
-export type PlantType = z.infer<typeof PlantTypeDtoSchema>;
 export type CreatePlantDTO = z.infer<typeof PlantDataSchema>;
 export type PlantDatabase = z.infer<typeof PlantSchema>;
 export type Plant = z.infer<typeof PlantDtoSchema>;
 
-export type Zone = {
-  uuid: string;
-  data: { employees: string[]; name: string };
-};
+export type CreateZoneDTO = z.infer<typeof ZoneDataSchema>;
+export type ZoneDatabase = z.infer<typeof ZoneSchema>;
+export type Zone = z.infer<typeof ZoneDtoSchema>;
 
-export type CreateZoneDTO = {
-  employees: string[];
-  name: string;
-};
-
-export type PlantRecord = {
-  uuid: string;
-  data: {
-    plant_uuid: string;
-    employee_name: string;
-    isWater: boolean;
-    isSun: boolean;
-    date: string;
-    resolved: boolean;
-    additionalInfo?: string | null;
-  };
-};
+export type CreatePlantRecordDTO = z.infer<typeof PlantRecordDataSchema>;
+export type PlantRecordDatabase = z.infer<typeof PlantRecordSchema>;
+export type PlantRecord = z.infer<typeof PlantRecordDtoSchema>;
 
 export type CreatePlantRequest = {
   command: "createPlant";
@@ -69,7 +54,7 @@ export type GetPlantListRequest = {
 
 export type CreatePlantTypeRequest = {
   command: "createPlantType";
-  payload: CreatePlantTypeDTO;
+  payload: CreatePlantTypeDto;
 };
 
 export type UpdatePlantTypeRequest = {
@@ -184,24 +169,3 @@ export type Req =
   | ScheduleRequests
   | ScoreboardRequests
   | ZoneRequests;
-
-export type ZoneDatabase = {
-  PK: string;
-  uuid: string;
-  type: "ZONE";
-  employees: string[];
-  name: string;
-};
-
-export type PlantRecordDatabase = {
-  PK: string;
-  uuid: string;
-  type: "PLANT_RECORD";
-  plant_uuid: string;
-  employee_name: string;
-  isWater: boolean;
-  isSun: boolean;
-  date: string;
-  resolved: boolean;
-  additionalInfo?: string | null;
-};
