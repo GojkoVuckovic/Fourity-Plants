@@ -259,8 +259,8 @@ export const plantTypeService = (db: DynamoDBDocumentClient) => {
         const { Items } = await db.send(
           new QueryCommand({
             TableName: TABLE_NAME,
-            IndexName: "GSIndex",
-            KeyConditionExpression: "GSI = :uuidValue",
+            IndexName: "GSI2ndex",
+            KeyConditionExpression: "GSI2 = :uuidValue",
             ExpressionAttributeValues: {
               ":uuidValue": req.payload.uuid,
             },
@@ -297,7 +297,7 @@ export const plantTypeService = (db: DynamoDBDocumentClient) => {
           );
         const updatePlantResult = await processRequest(
           updatePlantCommand,
-          "createPlant",
+          "deletePlantType",
         );
         if (!updatePlantResult.success) {
           return updatePlantResult;

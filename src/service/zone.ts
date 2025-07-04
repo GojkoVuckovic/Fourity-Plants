@@ -14,6 +14,7 @@ import {
   GetZoneRequest,
   GetZoneListRequest,
 } from "../types";
+import { PlantArraySchema } from "./plant";
 import { v4 as uuidv4 } from "uuid";
 import { z } from "zod";
 
@@ -30,7 +31,7 @@ export const ZoneSchema = BaseItemSchema.extend({
 export const ZoneDtoSchema = ZoneSchema.transform((zoneEntry) => {
   const { SK, data } = zoneEntry;
   return {
-    SK,
+    uuid: SK,
     ...data,
   };
 });
@@ -72,135 +73,217 @@ export const ZoneService = (db: DynamoDBDocumentClient) => {
       req: CreateZoneRequest,
     ): Promise<RequestResult<"createZone", CreateZoneDTO>> {
       const item = req.payload;
-      const parser_result = parseData(item, "createZone", ZoneDTOSchema);
-      if (parser_result.success) {
-        const zone_uuid: string = uuidv4();
-        const zone_database: ZoneDatabase = {
-          PK: `ZONE#${zone_uuid}`,
-          uuid: zone_uuid,
-          type: "ZONE",
-          name: parser_result.data.data.name,
-          employees: parser_result.data.data.employees,
-        };
-        const create_zone_command = async () =>
-          await db.send(
-            new PutCommand({
-              TableName: TABLE_NAME,
-              Item: zone_database,
-            }),
-          );
-        const create_zone_result = await processRequest(
-          create_zone_command,
-          "createZone",
-        );
-        if (create_zone_result.success) {
-          return createRequestSuccess("createZone")(
-            parser_result.data.data,
-            create_zone_result.code,
-            create_zone_result.message,
-          );
-        } else {
-          return create_zone_result;
-        }
-      } else {
-        return parser_result;
+      const parserResult = parseData(item, "createZone", ZoneDataSchema);
+      if (!parserResult.success) {
+        return parserResult;
       }
+      const zoneUuid: string = uuidv4();
+      const zoneDatabase: ZoneDatabase = {
+        PK: `ZONE#${zoneUuid}`,
+        SK: zoneUuid,
+        type: "ZONE",
+        GSI: parserResult.data.name,
+        GSI2: "",
+        data: {
+          name: parserResult.data.name,
+          employees: parserResult.data.employees,
+        },
+      };
+      const createZoneCommand = async () =>
+        await db.send(
+          new PutCommand({
+            TableName: TABLE_NAME,
+            Item: zoneDatabase,
+          }),
+        );
+      const createZoneResult = await processRequest(
+        createZoneCommand,
+        "createZone",
+      );
+      if (!createZoneResult.success) {
+        return createZoneResult;
+      }
+      return createRequestSuccess("createZone")(
+        parserResult.data,
+        createZoneResult.code,
+        createZoneResult.message,
+      );
     },
     async updateZone(
       req: UpdateZoneRequest,
     ): Promise<RequestResult<"updateZone", Zone>> {
-      const get_zone_command = async () => {
+      const getZoneCommand = async () => {
         const { Item } = await db.send(
           new GetCommand({
             TableName: TABLE_NAME,
             Key: {
               PK: `ZONE#${req.payload.uuid}`,
-              uuid: req.payload.uuid,
+              SK: req.payload.uuid,
             },
           }),
         );
         return Item;
       };
-      const get_zone_result = await processRequest(
-        get_zone_command,
-        "updateZone",
-      );
-      if (!get_zone_result.success) {
-        return get_zone_result;
+      const getZoneResult = await processRequest(getZoneCommand, "updateZone");
+      if (!getZoneResult.success) {
+        return getZoneResult;
       }
       const item = req.payload;
-      const parser_result = parseData(item, "updateZone", ZoneSchema);
-      if (parser_result.success) {
-        const zone_database: ZoneDatabase = {
-          PK: `ZONE#${parser_result.data.uuid}`,
-          uuid: parser_result.data.uuid,
-          type: "ZONE",
-          name: parser_result.data.data.name,
-          employees: parser_result.data.data.employees,
-        };
-        const update_zone_command = async () =>
-          await db.send(
-            new PutCommand({
-              TableName: TABLE_NAME,
-              Item: zone_database,
-            }),
-          );
-        const update_zone_result = await processRequest(
-          update_zone_command,
-          "updateZone",
-        );
-        if (update_zone_result.success) {
-          return createRequestSuccess("updateZone")(
-            parser_result.data,
-            update_zone_result.code,
-            update_zone_result.message,
-          );
-        } else {
-          return update_zone_result;
-        }
-      } else {
-        return parser_result;
+      const parserResult = parseData(item, "updateZone", ZoneDtoSchema);
+      if (!parserResult.success) {
+        return parserResult;
       }
+      const zoneDatabase: ZoneDatabase = {
+        PK: `ZONE#${parserResult.data.uuid}`,
+        SK: parserResult.data.uuid,
+        type: "ZONE",
+        GSI: req.payload.name,
+        GSI2: "",
+        data: {
+          name: req.payload.name,
+          employees: req.payload.employees,
+        },
+      };
+      const updateZoneCommand = async () =>
+        await db.send(
+          new PutCommand({
+            TableName: TABLE_NAME,
+            Item: zoneDatabase,
+          }),
+        );
+      const updateZoneResult = await processRequest(
+        updateZoneCommand,
+        "updateZone",
+      );
+      if (!updateZoneResult.success) {
+        return updateZoneResult;
+      }
+      return createRequestSuccess("updateZone")(
+        req.payload,
+        updateZoneResult.code,
+        updateZoneResult.message,
+      );
     },
     async deleteZone(
       req: DeleteZoneRequest,
     ): Promise<RequestResult<"deleteZone", any>> {
-      const get_zone_command = async () => {
+      const getZoneCommand = async () => {
         const { Item } = await db.send(
           new GetCommand({
             TableName: TABLE_NAME,
             Key: {
               PK: `ZONE#${req.payload.uuid}`,
-              uuid: req.payload.uuid,
+              SK: req.payload.uuid,
             },
           }),
         );
         return Item;
       };
-      const get_zone_result = await processRequest(
-        get_zone_command,
-        "deleteZone",
-      );
-      if (!get_zone_result.success) {
-        return get_zone_result;
+      const getZoneResult = await processRequest(getZoneCommand, "deleteZone");
+      if (!getZoneResult.success) {
+        return getZoneResult;
       }
-      const delete_zone_command = async () =>
+      const deleteZoneCommand = async () =>
         await db.send(
           new DeleteCommand({
             TableName: TABLE_NAME,
-            Key: { PK: `ZONE#${req.payload.uuid}`, uuid: req.payload.uuid },
+            Key: {
+              PK: `ZONE#${req.payload.uuid}`,
+              SK: req.payload.uuid,
+            },
           }),
         );
-      const delete_zone_result = await processRequest(
-        delete_zone_command,
+      const deleteZoneResult = await processRequest(
+        deleteZoneCommand,
         "deleteZone",
       );
-      return delete_zone_result;
+      if (!deleteZoneResult.success) {
+        return deleteZoneResult;
+      }
+      const getUnassignedZoneCommand = async () => {
+        const { Items } = await db.send(
+          new QueryCommand({
+            TableName: TABLE_NAME,
+            IndexName: "GSIndex",
+            KeyConditionExpression: "GSI = :nameValue",
+            ExpressionAttributeValues: {
+              ":nameValue": "Unassigned",
+            },
+          }),
+        );
+        return Items;
+      };
+      const getUnassignedZoneResult = await processRequest(
+        getUnassignedZoneCommand,
+        "deleteZone",
+      );
+      if (!getUnassignedZoneResult.success) {
+        return getUnassignedZoneResult;
+      }
+      const zoneData = getUnassignedZoneResult.data;
+      const parseResult = parseData(zoneData, "deleteZone", ZoneArraySchema);
+      if (!parseResult.success) {
+        return parseResult;
+      }
+      const uncategorizedZoneUuid = parseResult.data[0].uuid;
+      const getZoneUuidListCommand = async () => {
+        const { Items } = await db.send(
+          new QueryCommand({
+            TableName: TABLE_NAME,
+            IndexName: "GSIndex",
+            KeyConditionExpression: "GSI = :uuidValue",
+            ExpressionAttributeValues: {
+              ":uuidValue": req.payload.uuid,
+            },
+          }),
+        );
+        return Items;
+      };
+      const getZoneUuidListResult = await processRequest(
+        getZoneUuidListCommand,
+        "deleteZone",
+      );
+      if (!getZoneUuidListResult.success) {
+        return getZoneUuidListResult;
+      }
+      const zoneUuidData = getZoneUuidListResult.data;
+      const zoneUiidListResult = parseData(
+        zoneUuidData,
+        "deleteZone",
+        PlantArraySchema,
+      );
+      if (!zoneUiidListResult.success) {
+        return zoneUiidListResult;
+      }
+      const plantList = zoneUiidListResult.data;
+      plantList.forEach(async (plant) => {
+        plant.GSI = uncategorizedZoneUuid;
+        plant.data.zoneUuid = uncategorizedZoneUuid;
+        const updatePlantCommand = async () =>
+          await db.send(
+            new PutCommand({
+              TableName: TABLE_NAME,
+              Item: plant,
+            }),
+          );
+        const updatePlantResult = await processRequest(
+          updatePlantCommand,
+          "deleteZone",
+        );
+        if (!updatePlantResult.success) {
+          return updatePlantResult;
+        }
+      });
+      return createRequestSuccess("deleteZone")(
+        req.payload.uuid,
+        400,
+        "Zone deleted successfully",
+      );
     },
     async getZoneList(
       req: GetZoneListRequest,
     ): Promise<RequestResult<"getZoneList", Zone[]>> {
-      const get_zone_list_command = async () => {
+      const getZoneListCommand = async () => {
         const { Items } = await db.send(
           new QueryCommand({
             TableName: TABLE_NAME,
@@ -210,27 +293,20 @@ export const ZoneService = (db: DynamoDBDocumentClient) => {
               "#typeAttr": "type",
             },
             ExpressionAttributeValues: {
-              ":typeValue": { S: "ZONE" },
+              ":typeValue": "ZONE",
             },
           }),
         );
         return Items;
       };
-      const get_zone_list_result = await processRequest(
-        get_zone_list_command,
+      const getZoneListResult = await processRequest(
+        getZoneListCommand,
         "getZoneList",
       );
-      if (get_zone_list_result.success) {
-        const parse_data = [get_zone_list_result.data];
-        const parse_result = parseData(
-          parse_data,
-          "getZoneList",
-          ZoneArraySchema,
-        );
-        return parse_result;
-      } else {
-        return get_zone_list_result;
-      }
+      if (!getZoneListResult.success) return getZoneListResult;
+      const parsedData = getZoneListResult.data;
+      const parseResult = parseData(parsedData, "getZoneList", ZoneArraySchema);
+      return parseResult;
     },
   };
 };
