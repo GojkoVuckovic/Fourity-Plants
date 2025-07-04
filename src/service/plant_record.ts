@@ -41,6 +41,10 @@ export const PlantRecordDtoSchema = PlantRecordSchema.transform(
 
 export const plantRecordArraySchema = z.array(PlantRecordDtoSchema);
 
+export type CreatePlantRecordDTO = z.infer<typeof PlantRecordDataSchema>;
+export type PlantRecordDatabase = z.infer<typeof PlantRecordSchema>;
+export type PlantRecord = z.infer<typeof PlantRecordDtoSchema>;
+
 export const plantRecordService = (db: DynamoDBDocumentClient) => {
   return {
     async updatePlantRecord(

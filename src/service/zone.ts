@@ -13,9 +13,6 @@ import {
   DeleteZoneRequest,
   GetZoneRequest,
   GetZoneListRequest,
-  Zone,
-  CreateZoneDTO,
-  ZoneDatabase,
 } from "../types";
 import { v4 as uuidv4 } from "uuid";
 import { z } from "zod";
@@ -40,32 +37,36 @@ export const ZoneDtoSchema = ZoneSchema.transform((zoneEntry) => {
 
 export const ZoneArraySchema = z.array(ZoneDtoSchema);
 
+export type CreateZoneDTO = z.infer<typeof ZoneDataSchema>;
+export type ZoneDatabase = z.infer<typeof ZoneSchema>;
+export type Zone = z.infer<typeof ZoneDtoSchema>;
+
 export const ZoneService = (db: DynamoDBDocumentClient) => {
   return {
     async getZone(
       req: GetZoneRequest,
     ): Promise<RequestResult<"getZone", Zone>> {
-      const get_zone_command = async () => {
+      const getZoneCommand = async () => {
         const { Item } = await db.send(
           new GetCommand({
             TableName: TABLE_NAME,
             Key: {
               PK: `ZONE#${req.payload.uuid}`,
-              uuid: req.payload.uuid,
+              SK: req.payload.uuid,
             },
           }),
         );
         return Item;
       };
-      const get_zone_result = await processRequest(get_zone_command, "getZone");
 
-      if (get_zone_result.success) {
-        const item = get_zone_result.data;
-        const parser_result = parseData(item, "getZone", ZoneSchema);
-        return parser_result;
-      } else {
-        return get_zone_result;
+      const getZoneResult = await processRequest(getZoneCommand, "getZone");
+
+      if (!getZoneResult.success) {
+        return getZoneResult;
       }
+      const item = getZoneResult.data;
+      const parserResult = parseData(item, "getZone", ZoneDtoSchema);
+      return parserResult;
     },
     async createZone(
       req: CreateZoneRequest,

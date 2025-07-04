@@ -1,31 +1,7 @@
 import { z } from "zod";
-import {
-  PlantTypeDataSchema,
-  PlantTypeSchema,
-  PlantTypeDtoSchema,
-  PlantTypeDatabase,
-  PlantType,
-  CreatePlantTypeDto,
-} from "./service/plant_type";
-import { PlantDataSchema, PlantSchema, PlantDtoSchema } from "./service/plant";
-import { ZoneDataSchema, ZoneSchema, ZoneDtoSchema } from "./service/zone";
-import {
-  PlantRecordDataSchema,
-  PlantRecordSchema,
-  PlantRecordDtoSchema,
-} from "./service/plant_record";
-
-export type CreatePlantDTO = z.infer<typeof PlantDataSchema>;
-export type PlantDatabase = z.infer<typeof PlantSchema>;
-export type Plant = z.infer<typeof PlantDtoSchema>;
-
-export type CreateZoneDTO = z.infer<typeof ZoneDataSchema>;
-export type ZoneDatabase = z.infer<typeof ZoneSchema>;
-export type Zone = z.infer<typeof ZoneDtoSchema>;
-
-export type CreatePlantRecordDTO = z.infer<typeof PlantRecordDataSchema>;
-export type PlantRecordDatabase = z.infer<typeof PlantRecordSchema>;
-export type PlantRecord = z.infer<typeof PlantRecordDtoSchema>;
+import { PlantType, CreatePlantTypeDto } from "./service/plant_type";
+import { Plant, CreatePlantDTO } from "./service/plant";
+import { CreateZoneDTO, Zone } from "./service/zone";
 
 export type CreatePlantRequest = {
   command: "createPlant";
