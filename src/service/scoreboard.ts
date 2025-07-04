@@ -1,69 +1,55 @@
-import {
-	TABLE_NAME,
-	processRequest,
-	parseData,
-	plantRecordArraySchema,
-} from "./utils";
+import { TABLE_NAME, processRequest, parseData } from "./utils";
 import { DynamoDBDocumentClient, QueryCommand } from "@aws-sdk/lib-dynamodb";
 import { createRequestSuccess, RequestResult } from "../requests";
-import { GetScoreboardRequest, PlantRecord } from "../types";
-
-const PLANT_RECORD_TABLE_NAME: string =
-	process.env.PLANT_RECORD_TABLE_NAME || "";
+import { GetScoreboardRequest } from "../types";
+import { PlantRecord, PlantRecordArraySchema } from "./plant_record";
 
 export const scoreboardService = (db: DynamoDBDocumentClient) => {
-	return {
-		async getScoreboard(
-			req: GetScoreboardRequest,
-		): Promise<
-			RequestResult<"getScoreboard", { [employee_name: string]: number }>
-		> {
-			const get_plant_record_list_command = async () => {
-				const { Items } = await db.send(
-					new QueryCommand({
-						TableName: TABLE_NAME,
-						IndexName: "TypeIndex",
-						KeyConditionExpression: "#typeAttr = :typeValue",
-						ExpressionAttributeNames: {
-							"#typeAttr": "type",
-						},
-						ExpressionAttributeValues: {
-							":typeValue": { S: "PLANT_RECORD" },
-						},
-					}),
-				);
-				return Items;
-			};
-			const get_plant_record_list_result = await processRequest(
-				get_plant_record_list_command,
-				"getScoreboard",
-			);
-			if (get_plant_record_list_result.success) {
-				const parse_data = [get_plant_record_list_result.data];
-				const parse_result = parseData(
-					parse_data,
-					"getScoreboard",
-					plantRecordArraySchema,
-				);
-				if (parse_result.success) {
-					const plant_records = parse_result.data;
-					const scoreboard: { [employee_name: string]: number } = {};
-					for (const record of plant_records) {
-						if (record.data.resolved) {
-							if (scoreboard[record.data.employee_name]) {
-								scoreboard[record.data.employee_name]++;
-							} else {
-								scoreboard[record.data.employee_name] = 1;
-							}
-						}
-					}
-					return createRequestSuccess(req.command)(scoreboard, 200, "");
-				} else {
-					return parse_result;
-				}
-			} else {
-				return get_plant_record_list_result;
-			}
-		},
-	};
+  return {
+    async getScoreboard(
+      req: GetScoreboardRequest,
+    ): Promise<
+      RequestResult<"getScoreboard", { [employee_name: string]: number }>
+    > {
+      const getPlantRecordListCommand = async () => {
+        const { Items } = await db.send(
+          new QueryCommand({
+            TableName: TABLE_NAME,
+            IndexName: "TypeIndex",
+            KeyConditionExpression: "#typeAttr = :typeValue",
+            ExpressionAttributeNames: {
+              "#typeAttr": "type",
+            },
+            ExpressionAttributeValues: {
+              ":typeValue": "plantRecord",
+            },
+          }),
+        );
+        return Items;
+      };
+      const getPlantRecordListResult = await processRequest(
+        getPlantRecordListCommand,
+        "getScoreboard",
+      );
+      if (!getPlantRecordListResult.success) return getPlantRecordListResult;
+      const parsedData = getPlantRecordListResult.data;
+      const parseResult = parseData(
+        parsedData,
+        "getScoreboard",
+        PlantRecordArraySchema,
+      );
+      if (!parseResult.success) {
+        return parseResult;
+      }
+      const employeeNameCounts = parseResult.data.reduce(
+        (acc: { [key: string]: number }, record: PlantRecord) => {
+          const name = record.employeeName;
+          acc[name] = (acc[name] || 0) + 1;
+          return acc;
+        },
+        {} as { [employee_name: string]: number },
+      );
+      return createRequestSuccess("getScoreboard")(employeeNameCounts, 200, "");
+    },
+  };
 };
