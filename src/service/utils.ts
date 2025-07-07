@@ -1,3 +1,4 @@
+import { QueryCommand, QueryCommandInput } from "@aws-sdk/lib-dynamodb";
 import {
   createRequestFail,
   createRequestSuccess,
@@ -5,6 +6,7 @@ import {
   RequestResult,
 } from "../requests";
 import { z } from "zod";
+import { ListPayload } from "@src/types";
 
 export const TABLE_NAME = process.env.TABLE_NAME || "Table";
 
@@ -54,4 +56,27 @@ export const parseData = <
   } else {
     return createRequestFail(command)(500, result.error.message);
   }
+};
+
+export const createQueryCommand = (
+  payload: ListPayload,
+  entityType: string,
+): QueryCommand => {
+  const params: QueryCommandInput = {
+    TableName: TABLE_NAME,
+    IndexName: "TypeIndex",
+    KeyConditionExpression: "#typeAttr = :typeValue",
+    ExpressionAttributeNames: {
+      "#typeAttr": "type",
+    },
+    ExpressionAttributeValues: {
+      ":typeValue": entityType,
+    },
+    Limit: payload.pageSize,
+  };
+  if (payload.pageSize < 10 || payload.pageSize > 100) params.Limit = 10;
+  if (payload.startKey) {
+    params.ExclusiveStartKey = payload.startKey;
+  }
+  return new QueryCommand(params);
 };

@@ -1,4 +1,10 @@
-import { processRequest, TABLE_NAME, parseData, BaseItemSchema } from "./utils";
+import {
+  processRequest,
+  TABLE_NAME,
+  parseData,
+  BaseItemSchema,
+  createQueryCommand,
+} from "./utils";
 import {
   GetCommand,
   PutCommand,
@@ -201,32 +207,6 @@ export const ZoneService = (db: DynamoDBDocumentClient) => {
       if (!deleteZoneResult.success) {
         return deleteZoneResult;
       }
-      const getUnassignedZoneCommand = async () => {
-        const { Items } = await db.send(
-          new QueryCommand({
-            TableName: TABLE_NAME,
-            IndexName: "GSIndex",
-            KeyConditionExpression: "GSI = :nameValue",
-            ExpressionAttributeValues: {
-              ":nameValue": "Unassigned",
-            },
-          }),
-        );
-        return Items;
-      };
-      const getUnassignedZoneResult = await processRequest(
-        getUnassignedZoneCommand,
-        "deleteZone",
-      );
-      if (!getUnassignedZoneResult.success) {
-        return getUnassignedZoneResult;
-      }
-      const zoneData = getUnassignedZoneResult.data;
-      const parseResult = parseData(zoneData, "deleteZone", ZoneArraySchema);
-      if (!parseResult.success) {
-        return parseResult;
-      }
-      const uncategorizedZoneUuid = parseResult.data[0].uuid;
       const getZoneUuidListCommand = async () => {
         const { Items } = await db.send(
           new QueryCommand({
@@ -258,8 +238,8 @@ export const ZoneService = (db: DynamoDBDocumentClient) => {
       }
       const plantList = zoneUiidListResult.data;
       plantList.forEach(async (plant) => {
-        plant.GSI = uncategorizedZoneUuid;
-        plant.data.zoneUuid = uncategorizedZoneUuid;
+        plant.GSI = "0000-0000-0000-0001";
+        plant.data.zoneUuid = "0000-0000-0000-0001";
         const updatePlantCommand = async () =>
           await db.send(
             new PutCommand({
@@ -285,24 +265,9 @@ export const ZoneService = (db: DynamoDBDocumentClient) => {
       req: GetZoneListRequest,
     ): Promise<RequestResult<"getZoneList", Zone[]>> {
       const getZoneListCommand = async () => {
-        const params: QueryCommandInput = {
-          TableName: TABLE_NAME,
-          IndexName: "TypeIndex",
-          KeyConditionExpression: "#typeAttr = :typeValue",
-          ExpressionAttributeNames: {
-            "#typeAttr": "type",
-          },
-          ExpressionAttributeValues: {
-            ":typeValue": "ZONE",
-          },
-          Limit: req.payload.pageSize,
-        };
-        if (req.payload.pageSize < 10 || req.payload.pageSize > 100)
-          params.Limit = 10;
-        if (req.payload.startKey) {
-          params.ExclusiveStartKey = req.payload.startKey;
-        }
-        const { Items } = await db.send(new QueryCommand(params));
+        const { Items } = await db.send(
+          createQueryCommand(req.payload, "ZONE"),
+        );
         return Items;
       };
       const getZoneListResult = await processRequest(

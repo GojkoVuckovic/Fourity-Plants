@@ -1,4 +1,10 @@
-import { parseData, processRequest, TABLE_NAME, BaseItemSchema } from "./utils";
+import {
+  parseData,
+  processRequest,
+  TABLE_NAME,
+  BaseItemSchema,
+  createQueryCommand,
+} from "./utils";
 import {
   GetCommand,
   PutCommand,
@@ -123,24 +129,9 @@ export const plantRecordService = (db: DynamoDBDocumentClient) => {
       req: GetPlantRecordListRequest,
     ): Promise<RequestResult<"getPlantRecordList", PlantRecord[]>> {
       const getPlantRecordListCommand = async () => {
-        const params: QueryCommandInput = {
-          TableName: TABLE_NAME,
-          IndexName: "TypeIndex",
-          KeyConditionExpression: "#typeAttr = :typeValue",
-          ExpressionAttributeNames: {
-            "#typeAttr": "type",
-          },
-          ExpressionAttributeValues: {
-            ":typeValue": "PLANT_RECORD",
-          },
-          Limit: req.payload.pageSize,
-        };
-        if (req.payload.pageSize < 10 || req.payload.pageSize > 100)
-          params.Limit = 10;
-        if (req.payload.startKey) {
-          params.ExclusiveStartKey = req.payload.startKey;
-        }
-        const { Items } = await db.send(new QueryCommand(params));
+        const { Items } = await db.send(
+          createQueryCommand(req.payload, "PLANT_RECORD"),
+        );
         return Items;
       };
       const getPlantRecordListResult = await processRequest(
