@@ -3,6 +3,7 @@ import {
   GetCommand,
   PutCommand,
   QueryCommand,
+  QueryCommandInput,
   DynamoDBDocumentClient,
 } from "@aws-sdk/lib-dynamodb";
 import { createRequestSuccess, RequestResult } from "../requests";
@@ -122,19 +123,24 @@ export const plantRecordService = (db: DynamoDBDocumentClient) => {
       req: GetPlantRecordListRequest,
     ): Promise<RequestResult<"getPlantRecordList", PlantRecord[]>> {
       const getPlantRecordListCommand = async () => {
-        const { Items } = await db.send(
-          new QueryCommand({
-            TableName: TABLE_NAME,
-            IndexName: "TypeIndex",
-            KeyConditionExpression: "#typeAttr = :typeValue",
-            ExpressionAttributeNames: {
-              "#typeAttr": "type",
-            },
-            ExpressionAttributeValues: {
-              ":typeValue": "plantRecord",
-            },
-          }),
-        );
+        const params: QueryCommandInput = {
+          TableName: TABLE_NAME,
+          IndexName: "TypeIndex",
+          KeyConditionExpression: "#typeAttr = :typeValue",
+          ExpressionAttributeNames: {
+            "#typeAttr": "type",
+          },
+          ExpressionAttributeValues: {
+            ":typeValue": "PLANT_RECORD",
+          },
+          Limit: req.payload.pageSize,
+        };
+        if (req.payload.pageSize < 10 || req.payload.pageSize > 100)
+          params.Limit = 10;
+        if (req.payload.startKey) {
+          params.ExclusiveStartKey = req.payload.startKey;
+        }
+        const { Items } = await db.send(new QueryCommand(params));
         return Items;
       };
       const getPlantRecordListResult = await processRequest(

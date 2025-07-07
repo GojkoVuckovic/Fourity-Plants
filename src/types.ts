@@ -2,6 +2,14 @@ import { PlantType, CreatePlantTypeDto } from "./service/plant_type";
 import { Plant, CreatePlantDTO } from "./service/plant";
 import { CreateZoneDTO, Zone } from "./service/zone";
 
+export type ListPayload = {
+  pageSize: number;
+  startKey?: {
+    PK: string;
+    SK: string;
+  };
+};
+
 export type CreatePlantRequest = {
   command: "createPlant";
   payload: CreatePlantDTO;
@@ -24,7 +32,7 @@ export type GetPlantRequest = {
 
 export type GetPlantListRequest = {
   command: "getPlantList";
-  payload?: never;
+  payload: ListPayload;
 };
 
 export type CreatePlantTypeRequest = {
@@ -49,7 +57,7 @@ export type GetPlantTypeRequest = {
 
 export type GetPlantTypeListRequest = {
   command: "getPlantTypeList";
-  payload?: never;
+  payload: ListPayload;
 };
 
 export type CreateZoneRequest = {
@@ -74,7 +82,7 @@ export type GetZoneRequest = {
 
 export type GetZoneListRequest = {
   command: "getZoneList";
-  payload?: never;
+  payload: ListPayload;
 };
 
 export type UpdatePlantRecordRequest = {
@@ -84,7 +92,7 @@ export type UpdatePlantRecordRequest = {
 
 export type GetPlantRecordListRequest = {
   command: "getPlantRecordList";
-  payload?: never;
+  payload: ListPayload;
 };
 
 export type CreateScheduleRequest = {

@@ -4,6 +4,7 @@ import {
   PutCommand,
   DeleteCommand,
   QueryCommand,
+  QueryCommandInput,
   DynamoDBDocumentClient,
 } from "@aws-sdk/lib-dynamodb";
 import { createRequestSuccess, RequestResult } from "../requests";
@@ -294,19 +295,24 @@ export const plantService = (db: DynamoDBDocumentClient) => {
       req: GetPlantListRequest,
     ): Promise<RequestResult<"getPlantList", Plant[]>> {
       const getPlantListCommand = async () => {
-        const { Items } = await db.send(
-          new QueryCommand({
-            TableName: TABLE_NAME,
-            IndexName: "TypeIndex",
-            KeyConditionExpression: "#typeAttr = :typeValue",
-            ExpressionAttributeNames: {
-              "#typeAttr": "type",
-            },
-            ExpressionAttributeValues: {
-              ":typeValue": "PLANT",
-            },
-          }),
-        );
+        const params: QueryCommandInput = {
+          TableName: TABLE_NAME,
+          IndexName: "TypeIndex",
+          KeyConditionExpression: "#typeAttr = :typeValue",
+          ExpressionAttributeNames: {
+            "#typeAttr": "type",
+          },
+          ExpressionAttributeValues: {
+            ":typeValue": "PLANT",
+          },
+          Limit: req.payload.pageSize,
+        };
+        if (req.payload.pageSize < 10 || req.payload.pageSize > 100)
+          params.Limit = 10;
+        if (req.payload.startKey) {
+          params.ExclusiveStartKey = req.payload.startKey;
+        }
+        const { Items } = await db.send(new QueryCommand(params));
         return Items;
       };
       const getPlantListResult = await processRequest(

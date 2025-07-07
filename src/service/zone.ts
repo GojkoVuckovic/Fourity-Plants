@@ -5,6 +5,7 @@ import {
   DeleteCommand,
   DynamoDBDocumentClient,
   QueryCommand,
+  QueryCommandInput,
 } from "@aws-sdk/lib-dynamodb";
 import { createRequestSuccess, RequestResult } from "../requests";
 import {
@@ -284,19 +285,24 @@ export const ZoneService = (db: DynamoDBDocumentClient) => {
       req: GetZoneListRequest,
     ): Promise<RequestResult<"getZoneList", Zone[]>> {
       const getZoneListCommand = async () => {
-        const { Items } = await db.send(
-          new QueryCommand({
-            TableName: TABLE_NAME,
-            IndexName: "TypeIndex",
-            KeyConditionExpression: "#typeAttr = :typeValue",
-            ExpressionAttributeNames: {
-              "#typeAttr": "type",
-            },
-            ExpressionAttributeValues: {
-              ":typeValue": "ZONE",
-            },
-          }),
-        );
+        const params: QueryCommandInput = {
+          TableName: TABLE_NAME,
+          IndexName: "TypeIndex",
+          KeyConditionExpression: "#typeAttr = :typeValue",
+          ExpressionAttributeNames: {
+            "#typeAttr": "type",
+          },
+          ExpressionAttributeValues: {
+            ":typeValue": "ZONE",
+          },
+          Limit: req.payload.pageSize,
+        };
+        if (req.payload.pageSize < 10 || req.payload.pageSize > 100)
+          params.Limit = 10;
+        if (req.payload.startKey) {
+          params.ExclusiveStartKey = req.payload.startKey;
+        }
+        const { Items } = await db.send(new QueryCommand(params));
         return Items;
       };
       const getZoneListResult = await processRequest(
