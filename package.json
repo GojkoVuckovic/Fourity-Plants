@@ -1,0 +1,31 @@
+{
+	"name": "my-unified-sst-app",
+	"version": "0.1.0",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"dev": "sst dev",
+		"build": "sst build",
+		"deploy": "sst deploy",
+		"remove": "sst remove",
+		"console": "sst console",
+		"typecheck": "tsc --noEmit"
+	},
+	"devDependencies": {
+		"@pulumi/aws": "^6.66.2",
+		"@pulumi/awsx": "^2.x.x",
+		"@pulumi/command": "^1.0.1",
+		"@pulumi/pulumi": "^3.146.0",
+		"@types/node": "^20.x.x",
+		"sst": "3.17.6",
+		"typescript": "^5.8.3"
+	},
+	"dependencies": {
+		"@aws-sdk/client-dynamodb": "^3.x.x",
+		"@aws-sdk/client-lambda": "^3.830.0",
+		"@aws-sdk/lib-dynamodb": "^3.x.x",
+		"@smithy/types": "^4.3.1",
+		"uuid": "^11.1.0",
+		"zod": "^3.25.67"
+	}
+}
