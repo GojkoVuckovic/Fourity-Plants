@@ -1,14 +1,14 @@
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import { DynamoDBDocumentClient } from "@aws-sdk/lib-dynamodb";
-import * as employee from "./employee.ts";
-import * as plant_record from "./plant_record.ts";
-import * as plant_type from "./plant_type.ts";
-import * as plant from "./plant.ts";
-import * as schedule from "./schedule.ts";
-import * as scoreboard from "./scoreboard.ts";
-import * as zone from "./zone.ts";
-import { assertUnreachable } from "./utils.ts";
-import { Req } from "../types.ts";
+import * as employee from "./employee";
+import * as plant_record from "./plant_record";
+import * as plant_type from "./plant_type";
+import * as plant from "./plant";
+import * as schedule from "./schedule";
+import * as scoreboard from "./scoreboard";
+import * as zone from "./zone";
+import { assertUnreachable } from "./utils";
+import { Req } from "../types";
 
 const client = new DynamoDBClient({});
 const docClient = DynamoDBDocumentClient.from(client);

@@ -1,4 +1,3 @@
-import { z } from "zod";
 import { PlantType, CreatePlantTypeDto } from "./service/plant_type";
 import { Plant, CreatePlantDTO } from "./service/plant";
 import { CreateZoneDTO, Zone } from "./service/zone";

@@ -3,10 +3,10 @@ import {
   APIGatewayProxyResult,
   Context,
 } from "aws-lambda";
-import { ProcessRequest } from "./service/index.ts";
-import { successResponse, errorResponse } from "./response.ts";
+import { ProcessRequest } from "./service/index";
+import { successResponse, errorResponse } from "./response";
 import { createRequestFail, createRequestSuccess } from "./requests";
-import { Req } from "./types.ts";
+import { Req } from "./types";
 
 const BodyParseFail = createRequestFail("body_parse");
 

@@ -6,11 +6,7 @@ import {
   DynamoDBDocumentClient,
   QueryCommand,
 } from "@aws-sdk/lib-dynamodb";
-import {
-  createRequestFail,
-  createRequestSuccess,
-  RequestResult,
-} from "../requests";
+import { createRequestSuccess, RequestResult } from "../requests";
 import {
   CreatePlantTypeRequest,
   UpdatePlantTypeRequest,

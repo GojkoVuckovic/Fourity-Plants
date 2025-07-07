@@ -1,0 +1,44 @@
+{
+	"compilerOptions": {
+		/* Language and Environment */
+		"target": "ES2024",
+		"lib": ["ESNext"],
+		"module": "Preserve",
+		"moduleResolution": "bundler",
+		"moduleDetection": "force",
+
+		/* Emit */
+		"declaration": true,
+		"outDir": "dist",
+
+		/* Interop Constraints */
+		"esModuleInterop": true,
+		"forceConsistentCasingInFileNames": true,
+		"isolatedModules": true,
+
+		/* Type Checking */
+		"strict": true,
+		"noImplicitAny": false,
+		"strictNullChecks": true,
+		"strictFunctionTypes": true,
+		"strictBindCallApply": true,
+		"strictPropertyInitialization": false,
+		"noImplicitThis": true,
+		"alwaysStrict": true,
+
+		/* Completeness */
+		"noUnusedLocals": true,
+		"noUnusedParameters": true,
+		"noImplicitReturns": true,
+		"noFallthroughCasesInSwitch": true,
+
+		/* Advanced Options */
+		"skipLibCheck": true,
+		"baseUrl": ".",
+		"paths": {
+			"@src/*": ["src/*"],
+			"@tests/*": ["tests/*"]
+		}
+	},
+	"include": ["src/", "tests/"]
+}

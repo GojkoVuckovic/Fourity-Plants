@@ -6,11 +6,7 @@ import {
   QueryCommand,
   DynamoDBDocumentClient,
 } from "@aws-sdk/lib-dynamodb";
-import {
-  createRequestFail,
-  createRequestSuccess,
-  RequestResult,
-} from "../requests";
+import { createRequestSuccess, RequestResult } from "../requests";
 import {
   CreatePlantRequest,
   UpdatePlantRequest,
@@ -86,7 +82,7 @@ export const plantService = (db: DynamoDBDocumentClient) => {
             TableName: TABLE_NAME,
             Key: {
               PK: `PLANT_TYPE#${req.payload.plantTypeUuid}`,
-              uuid: req.payload.plantTypeUuid,
+              SK: req.payload.plantTypeUuid,
             },
           }),
         );
@@ -106,7 +102,7 @@ export const plantService = (db: DynamoDBDocumentClient) => {
               TableName: TABLE_NAME,
               Key: {
                 PK: `ZONE#${req.payload.zoneUuid}`,
-                uuid: req.payload.zoneUuid,
+                SK: req.payload.zoneUuid,
               },
             }),
           );
@@ -190,7 +186,7 @@ export const plantService = (db: DynamoDBDocumentClient) => {
             TableName: TABLE_NAME,
             Key: {
               PK: `PLANT_TYPE#${req.payload.plantTypeUuid}`,
-              uuid: req.payload.plantTypeUuid,
+              SK: req.payload.plantTypeUuid,
             },
           }),
         );
@@ -209,7 +205,7 @@ export const plantService = (db: DynamoDBDocumentClient) => {
             TableName: TABLE_NAME,
             Key: {
               PK: `ZONE#${req.payload.zoneUuid}`,
-              uuid: req.payload.zoneUuid,
+              SK: req.payload.zoneUuid,
             },
           }),
         );
