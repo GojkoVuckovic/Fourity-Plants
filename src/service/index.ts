@@ -7,7 +7,11 @@ import * as plant from "./plant";
 import * as schedule from "./schedule";
 import * as scoreboard from "./scoreboard";
 import * as zone from "./zone";
-import { assertUnreachable } from "./utils";
+import {
+  assertUnreachable,
+  resolveListRequest,
+  resolvePageSize,
+} from "./utils";
 import { Req } from "../types";
 
 const client = new DynamoDBClient({});
@@ -41,7 +45,8 @@ export const ProcessRequest = async (data: Req) => {
     case "getPlantType":
       return plantTypeServiceInstance.getPlantType(data);
     case "getPlantTypeList":
-      return plantTypeServiceInstance.getPlantTypeList(data);
+      const requestData = resolveListRequest(data);
+      return plantTypeServiceInstance.getPlantTypeList(requestData);
     case "createZone":
       return zoneServiceInstance.createZone(data);
     case "updateZone":

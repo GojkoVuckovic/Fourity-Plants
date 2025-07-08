@@ -4,6 +4,7 @@ import {
   parseData,
   BaseItemSchema,
   createQueryCommand,
+  createListResponse,
 } from "./utils";
 import {
   GetCommand,
@@ -20,6 +21,7 @@ import {
   DeletePlantTypeRequest,
   GetPlantTypeRequest,
   GetPlantTypeListRequest,
+  ListResponse,
 } from "../types";
 import { v4 as uuidv4 } from "uuid";
 import { z } from "zod";
@@ -284,25 +286,28 @@ export const plantTypeService = (db: DynamoDBDocumentClient) => {
     },
     async getPlantTypeList(
       req: GetPlantTypeListRequest,
-    ): Promise<RequestResult<"getPlantTypeList", PlantType[]>> {
+    ): Promise<
+      RequestResult<"getPlantTypeList", ListResponse<Array<PlantType>>>
+    > {
       const getPlantTypeListCommand = async () => {
-        const { Items } = await db.send(
+        const { Items, LastEvaluatedKey } = await db.send(
           createQueryCommand(req.payload, "PLANT_TYPE"),
         );
-        return Items;
+        return { Items, LastEvaluatedKey };
       };
       const getPlantTypeListResult = await processRequest(
         getPlantTypeListCommand,
-        "getPlantTypeList",
+        req.command,
       );
       if (!getPlantTypeListResult.success) return getPlantTypeListResult;
       const parsedData = getPlantTypeListResult.data;
       const parseResult = parseData(
         parsedData,
-        "getPlantTypeList",
+        req.command,
         PlantTypeArraySchema,
       );
-      return parseResult;
+      if (!parseResult.success) return parseResult;
+      return createListResponse(parseResult.data, getPlantTypeListResult);
     },
   };
 };

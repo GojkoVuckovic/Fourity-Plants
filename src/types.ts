@@ -3,8 +3,16 @@ import { Plant, CreatePlantDTO } from "./service/plant";
 import { CreateZoneDTO, Zone } from "./service/zone";
 
 export type ListPayload = {
-  pageSize: number;
+  pageSize?: number;
   startKey?: {
+    PK: string;
+    SK: string;
+  };
+};
+
+export type ListResponse<T> = {
+  data: T;
+  lastKey?: {
     PK: string;
     SK: string;
   };

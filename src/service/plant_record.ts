@@ -8,8 +8,6 @@ import {
 import {
   GetCommand,
   PutCommand,
-  QueryCommand,
-  QueryCommandInput,
   DynamoDBDocumentClient,
 } from "@aws-sdk/lib-dynamodb";
 import { createRequestSuccess, RequestResult } from "../requests";

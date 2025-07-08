@@ -6,7 +6,7 @@ import {
   RequestResult,
 } from "../requests";
 import { z } from "zod";
-import { ListPayload } from "@src/types";
+import { ListPayload, ListRequests, ListResponse } from "@src/types";
 
 export const TABLE_NAME = process.env.TABLE_NAME || "Table";
 
@@ -74,9 +74,35 @@ export const createQueryCommand = (
     },
     Limit: payload.pageSize,
   };
-  if (payload.pageSize < 10 || payload.pageSize > 100) params.Limit = 10;
   if (payload.startKey) {
     params.ExclusiveStartKey = payload.startKey;
   }
   return new QueryCommand(params);
 };
+
+const MAX_PAGE_SIZE = 100;
+const MIN_PAGE_SIZE = 10;
+export const resolvePageSize = (pageSize?: number): number => {
+  if (!pageSize) return MIN_PAGE_SIZE;
+  if (pageSize < MIN_PAGE_SIZE) return MIN_PAGE_SIZE;
+  if (pageSize > MAX_PAGE_SIZE) return MAX_PAGE_SIZE;
+  return pageSize;
+};
+
+export const resolveListPayload = (payload: ListPayload): ListPayload => ({
+  pageSize: resolvePageSize(payload.pageSize),
+  startKey: payload.startKey,
+});
+
+export const resolveListRequest = <T extends ListRequests>(request: T): T => ({
+  ...request,
+  payload: resolveListPayload(request.payload),
+});
+
+export const createListResponse = <T>(
+  data: T,
+  lastKey?: { PK: string; SK: string },
+): ListResponse<T> => ({
+  data,
+  lastKey,
+});
