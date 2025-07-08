@@ -4,6 +4,7 @@ import {
   TABLE_NAME,
   BaseItemSchema,
   createQueryCommand,
+  createListResponse,
 } from "./utils";
 import {
   GetCommand,
@@ -11,7 +12,12 @@ import {
   DynamoDBDocumentClient,
 } from "@aws-sdk/lib-dynamodb";
 import { createRequestSuccess, RequestResult } from "../requests";
-import { UpdatePlantRecordRequest, GetPlantRecordListRequest } from "../types";
+import {
+  UpdatePlantRecordRequest,
+  GetPlantRecordListRequest,
+  QueryResult,
+  ListResponse,
+} from "../types";
 import { z } from "zod";
 
 export const PlantRecordDataSchema = z.object({
@@ -125,25 +131,32 @@ export const plantRecordService = (db: DynamoDBDocumentClient) => {
     },
     async getPlantRecordList(
       req: GetPlantRecordListRequest,
-    ): Promise<RequestResult<"getPlantRecordList", PlantRecord[]>> {
-      const getPlantRecordListCommand = async () => {
-        const { Items } = await db.send(
-          createQueryCommand(req.payload, "PLANT_RECORD"),
+    ): Promise<
+      RequestResult<"getPlantRecordList", ListResponse<Array<PlantRecord>>>
+    > {
+      const getPlantRecordListCommand = async (): Promise<QueryResult> => {
+        const { Items, LastEvaluatedKey } = await db.send(
+          createQueryCommand(req.payload, "PLANT_TYPE"),
         );
-        return Items;
+        return { Items, LastEvaluatedKey };
       };
       const getPlantRecordListResult = await processRequest(
         getPlantRecordListCommand,
-        "getPlantRecordList",
+        req.command,
       );
       if (!getPlantRecordListResult.success) return getPlantRecordListResult;
-      const parsedData = getPlantRecordListResult.data;
+      const parsedData = getPlantRecordListResult.data.Items;
       const parseResult = parseData(
         parsedData,
-        "getPlantRecordList",
+        req.command,
         PlantRecordArraySchema,
       );
-      return parseResult;
+      if (!parseResult.success) return parseResult;
+      const listResponse = createListResponse(
+        parseResult.data,
+        getPlantRecordListResult.data.LastEvaluatedKey,
+      );
+      return createRequestSuccess(req.command)(listResponse, 200, "");
     },
   };
 };

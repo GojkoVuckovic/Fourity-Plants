@@ -12,10 +12,12 @@ export type ListPayload = {
 
 export type ListResponse<T> = {
   data: T;
-  lastKey?: {
-    PK: string;
-    SK: string;
-  };
+  lastKey?: Record<string, any>;
+};
+
+export type QueryResult = {
+  Items?: Record<string, any>;
+  LastEvaluatedKey?: Record<string, any>;
 };
 
 export type CreatePlantRequest = {
@@ -144,6 +146,12 @@ type PlantTypeRequests =
 type ScheduleRequests = CreateScheduleRequest | GetScheduleRequest;
 
 type ScoreboardRequests = GetScoreboardRequest;
+
+export type ListRequests =
+  | GetPlantListRequest
+  | GetPlantRecordListRequest
+  | GetPlantTypeListRequest
+  | GetZoneListRequest;
 
 type ZoneRequests =
   | CreateZoneRequest

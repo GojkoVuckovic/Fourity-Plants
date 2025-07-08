@@ -17,15 +17,18 @@ export const assertUnreachable =
 
 export const processRequest = async <
   OP extends string,
-  T,
-  U extends () => Promise<T>,
+  U extends () => Promise<unknown>,
 >(
   future: U,
   cmdName: OP,
-): Promise<RequestResult<OP, T>> => {
+): Promise<RequestResult<OP, Awaited<ReturnType<U>>>> => {
   try {
     const result = await future();
-    return createRequestSuccess(cmdName)(result, 200, "successful");
+    return createRequestSuccess(cmdName)(
+      result,
+      200,
+      "successful",
+    ) as unknown as Promise<RequestResult<OP, Awaited<ReturnType<U>>>>;
   } catch (error: any) {
     return createRequestFail(cmdName)(500, error.message);
   }
@@ -101,7 +104,7 @@ export const resolveListRequest = <T extends ListRequests>(request: T): T => ({
 
 export const createListResponse = <T>(
   data: T,
-  lastKey?: { PK: string; SK: string },
+  lastKey?: Record<string, any>,
 ): ListResponse<T> => ({
   data,
   lastKey,

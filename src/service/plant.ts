@@ -4,13 +4,12 @@ import {
   TABLE_NAME,
   BaseItemSchema,
   createQueryCommand,
+  createListResponse,
 } from "./utils";
 import {
   GetCommand,
   PutCommand,
   DeleteCommand,
-  QueryCommand,
-  QueryCommandInput,
   DynamoDBDocumentClient,
 } from "@aws-sdk/lib-dynamodb";
 import { createRequestSuccess, RequestResult } from "../requests";
@@ -20,6 +19,8 @@ import {
   DeletePlantRequest,
   GetPlantRequest,
   GetPlantListRequest,
+  ListResponse,
+  QueryResult,
 } from "../types";
 
 import { v4 as uuidv4 } from "uuid";
@@ -299,25 +300,30 @@ export const plantService = (db: DynamoDBDocumentClient) => {
     },
     async getPlantList(
       req: GetPlantListRequest,
-    ): Promise<RequestResult<"getPlantList", Plant[]>> {
-      const getPlantListCommand = async () => {
-        const { Items } = await db.send(
+    ): Promise<RequestResult<"getPlantList", ListResponse<Array<Plant>>>> {
+      const getPlantListCommand = async (): Promise<QueryResult> => {
+        const { Items, LastEvaluatedKey } = await db.send(
           createQueryCommand(req.payload, "PLANT"),
         );
-        return Items;
+        return { Items, LastEvaluatedKey };
       };
       const getPlantListResult = await processRequest(
         getPlantListCommand,
-        "getPlantList",
+        req.command,
       );
       if (!getPlantListResult.success) return getPlantListResult;
-      const parsedData = getPlantListResult.data;
+      const parsedData = getPlantListResult.data.Items;
       const parseResult = parseData(
         parsedData,
-        "getPlantList",
+        req.command,
         PlantDtoArraySchema,
       );
-      return parseResult;
+      if (!parseResult.success) return parseResult;
+      const listResponse = createListResponse(
+        parseResult.data,
+        getPlantListResult.data.LastEvaluatedKey,
+      );
+      return createRequestSuccess(req.command)(listResponse, 200, "");
     },
   };
 };

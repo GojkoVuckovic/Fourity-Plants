@@ -12,7 +12,6 @@ import {
   DeleteCommand,
   DynamoDBDocumentClient,
   QueryCommand,
-  QueryCommandInput,
 } from "@aws-sdk/lib-dynamodb";
 import { createRequestSuccess, RequestResult } from "../requests";
 import {
@@ -22,6 +21,7 @@ import {
   GetPlantTypeRequest,
   GetPlantTypeListRequest,
   ListResponse,
+  QueryResult,
 } from "../types";
 import { v4 as uuidv4 } from "uuid";
 import { z } from "zod";
@@ -289,7 +289,7 @@ export const plantTypeService = (db: DynamoDBDocumentClient) => {
     ): Promise<
       RequestResult<"getPlantTypeList", ListResponse<Array<PlantType>>>
     > {
-      const getPlantTypeListCommand = async () => {
+      const getPlantTypeListCommand = async (): Promise<QueryResult> => {
         const { Items, LastEvaluatedKey } = await db.send(
           createQueryCommand(req.payload, "PLANT_TYPE"),
         );
@@ -300,14 +300,18 @@ export const plantTypeService = (db: DynamoDBDocumentClient) => {
         req.command,
       );
       if (!getPlantTypeListResult.success) return getPlantTypeListResult;
-      const parsedData = getPlantTypeListResult.data;
+      const parsedData = getPlantTypeListResult.data.Items;
       const parseResult = parseData(
         parsedData,
         req.command,
         PlantTypeArraySchema,
       );
       if (!parseResult.success) return parseResult;
-      return createListResponse(parseResult.data, getPlantTypeListResult);
+      const listResponse = createListResponse(
+        parseResult.data,
+        getPlantTypeListResult.data.LastEvaluatedKey,
+      );
+      return createRequestSuccess(req.command)(listResponse, 200, "");
     },
   };
 };
