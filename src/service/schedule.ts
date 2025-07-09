@@ -32,13 +32,13 @@ export const scheduleService = (db: DynamoDBDocumentClient) => {
       };
       const getPlantRecordListResult = await processRequest(
         getPlantRecordListCommand,
-        "getSchedule",
+        req.command,
       );
       if (!getPlantRecordListResult.success) return getPlantRecordListResult;
       const parsedData = getPlantRecordListResult.data;
       const parseResult = parseData(
         parsedData,
-        "getSchedule",
+        req.command,
         PlantRecordArraySchema,
       );
       return parseResult;

@@ -1,4 +1,11 @@
-import { processRequest, TABLE_NAME, parseData, BaseItemSchema } from "./utils";
+import {
+  processRequest,
+  TABLE_NAME,
+  parseData,
+  BaseItemSchema,
+  createQueryCommand,
+  createListResponse,
+} from "./utils";
 import {
   GetCommand,
   PutCommand,
@@ -13,6 +20,8 @@ import {
   DeleteZoneRequest,
   GetZoneRequest,
   GetZoneListRequest,
+  ListResponse,
+  QueryResult,
 } from "../types";
 import { PlantArraySchema } from "./plant";
 import { v4 as uuidv4 } from "uuid";
@@ -60,20 +69,20 @@ export const ZoneService = (db: DynamoDBDocumentClient) => {
         return Item;
       };
 
-      const getZoneResult = await processRequest(getZoneCommand, "getZone");
+      const getZoneResult = await processRequest(getZoneCommand, req.command);
 
       if (!getZoneResult.success) {
         return getZoneResult;
       }
       const item = getZoneResult.data;
-      const parserResult = parseData(item, "getZone", ZoneDtoSchema);
+      const parserResult = parseData(item, req.command, ZoneDtoSchema);
       return parserResult;
     },
     async createZone(
       req: CreateZoneRequest,
     ): Promise<RequestResult<"createZone", CreateZoneDTO>> {
       const item = req.payload;
-      const parserResult = parseData(item, "createZone", ZoneDataSchema);
+      const parserResult = parseData(item, req.command, ZoneDataSchema);
       if (!parserResult.success) {
         return parserResult;
       }
@@ -98,12 +107,12 @@ export const ZoneService = (db: DynamoDBDocumentClient) => {
         );
       const createZoneResult = await processRequest(
         createZoneCommand,
-        "createZone",
+        req.command,
       );
       if (!createZoneResult.success) {
         return createZoneResult;
       }
-      return createRequestSuccess("createZone")(
+      return createRequestSuccess(req.command)(
         parserResult.data,
         createZoneResult.code,
         createZoneResult.message,
@@ -124,12 +133,12 @@ export const ZoneService = (db: DynamoDBDocumentClient) => {
         );
         return Item;
       };
-      const getZoneResult = await processRequest(getZoneCommand, "updateZone");
+      const getZoneResult = await processRequest(getZoneCommand, req.command);
       if (!getZoneResult.success) {
         return getZoneResult;
       }
       const item = req.payload;
-      const parserResult = parseData(item, "updateZone", ZoneDtoSchema);
+      const parserResult = parseData(item, req.command, ZoneDtoSchema);
       if (!parserResult.success) {
         return parserResult;
       }
@@ -153,12 +162,12 @@ export const ZoneService = (db: DynamoDBDocumentClient) => {
         );
       const updateZoneResult = await processRequest(
         updateZoneCommand,
-        "updateZone",
+        req.command,
       );
       if (!updateZoneResult.success) {
         return updateZoneResult;
       }
-      return createRequestSuccess("updateZone")(
+      return createRequestSuccess(req.command)(
         req.payload,
         updateZoneResult.code,
         updateZoneResult.message,
@@ -179,7 +188,7 @@ export const ZoneService = (db: DynamoDBDocumentClient) => {
         );
         return Item;
       };
-      const getZoneResult = await processRequest(getZoneCommand, "deleteZone");
+      const getZoneResult = await processRequest(getZoneCommand, req.command);
       if (!getZoneResult.success) {
         return getZoneResult;
       }
@@ -195,37 +204,11 @@ export const ZoneService = (db: DynamoDBDocumentClient) => {
         );
       const deleteZoneResult = await processRequest(
         deleteZoneCommand,
-        "deleteZone",
+        req.command,
       );
       if (!deleteZoneResult.success) {
         return deleteZoneResult;
       }
-      const getUnassignedZoneCommand = async () => {
-        const { Items } = await db.send(
-          new QueryCommand({
-            TableName: TABLE_NAME,
-            IndexName: "GSIndex",
-            KeyConditionExpression: "GSI = :nameValue",
-            ExpressionAttributeValues: {
-              ":nameValue": "Unassigned",
-            },
-          }),
-        );
-        return Items;
-      };
-      const getUnassignedZoneResult = await processRequest(
-        getUnassignedZoneCommand,
-        "deleteZone",
-      );
-      if (!getUnassignedZoneResult.success) {
-        return getUnassignedZoneResult;
-      }
-      const zoneData = getUnassignedZoneResult.data;
-      const parseResult = parseData(zoneData, "deleteZone", ZoneArraySchema);
-      if (!parseResult.success) {
-        return parseResult;
-      }
-      const uncategorizedZoneUuid = parseResult.data[0].uuid;
       const getZoneUuidListCommand = async () => {
         const { Items } = await db.send(
           new QueryCommand({
@@ -241,7 +224,7 @@ export const ZoneService = (db: DynamoDBDocumentClient) => {
       };
       const getZoneUuidListResult = await processRequest(
         getZoneUuidListCommand,
-        "deleteZone",
+        req.command,
       );
       if (!getZoneUuidListResult.success) {
         return getZoneUuidListResult;
@@ -249,7 +232,7 @@ export const ZoneService = (db: DynamoDBDocumentClient) => {
       const zoneUuidData = getZoneUuidListResult.data;
       const zoneUiidListResult = parseData(
         zoneUuidData,
-        "deleteZone",
+        req.command,
         PlantArraySchema,
       );
       if (!zoneUiidListResult.success) {
@@ -257,8 +240,8 @@ export const ZoneService = (db: DynamoDBDocumentClient) => {
       }
       const plantList = zoneUiidListResult.data;
       plantList.forEach(async (plant) => {
-        plant.GSI = uncategorizedZoneUuid;
-        plant.data.zoneUuid = uncategorizedZoneUuid;
+        plant.GSI = "0000-0000-0000-0001";
+        plant.data.zoneUuid = "0000-0000-0000-0001";
         const updatePlantCommand = async () =>
           await db.send(
             new PutCommand({
@@ -268,13 +251,13 @@ export const ZoneService = (db: DynamoDBDocumentClient) => {
           );
         const updatePlantResult = await processRequest(
           updatePlantCommand,
-          "deleteZone",
+          req.command,
         );
         if (!updatePlantResult.success) {
           return updatePlantResult;
         }
       });
-      return createRequestSuccess("deleteZone")(
+      return createRequestSuccess(req.command)(
         req.payload.uuid,
         400,
         "Zone deleted successfully",
@@ -282,31 +265,26 @@ export const ZoneService = (db: DynamoDBDocumentClient) => {
     },
     async getZoneList(
       req: GetZoneListRequest,
-    ): Promise<RequestResult<"getZoneList", Zone[]>> {
-      const getZoneListCommand = async () => {
-        const { Items } = await db.send(
-          new QueryCommand({
-            TableName: TABLE_NAME,
-            IndexName: "TypeIndex",
-            KeyConditionExpression: "#typeAttr = :typeValue",
-            ExpressionAttributeNames: {
-              "#typeAttr": "type",
-            },
-            ExpressionAttributeValues: {
-              ":typeValue": "ZONE",
-            },
-          }),
+    ): Promise<RequestResult<"getZoneList", ListResponse<Array<Zone>>>> {
+      const getZoneListCommand = async (): Promise<QueryResult> => {
+        const { Items, LastEvaluatedKey } = await db.send(
+          createQueryCommand(req.payload, "ZONE"),
         );
-        return Items;
+        return { Items, LastEvaluatedKey };
       };
       const getZoneListResult = await processRequest(
         getZoneListCommand,
-        "getZoneList",
+        req.command,
       );
       if (!getZoneListResult.success) return getZoneListResult;
-      const parsedData = getZoneListResult.data;
-      const parseResult = parseData(parsedData, "getZoneList", ZoneArraySchema);
-      return parseResult;
+      const parsedData = getZoneListResult.data.Items;
+      const parseResult = parseData(parsedData, req.command, ZoneArraySchema);
+      if (!parseResult.success) return parseResult;
+      const listResponse = createListResponse(
+        parseResult.data,
+        getZoneListResult.data.LastEvaluatedKey,
+      );
+      return createRequestSuccess(req.command)(listResponse, 200, "");
     },
   };
 };

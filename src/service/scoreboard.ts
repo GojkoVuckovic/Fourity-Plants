@@ -29,13 +29,13 @@ export const scoreboardService = (db: DynamoDBDocumentClient) => {
       };
       const getPlantRecordListResult = await processRequest(
         getPlantRecordListCommand,
-        "getScoreboard",
+        req.command,
       );
       if (!getPlantRecordListResult.success) return getPlantRecordListResult;
       const parsedData = getPlantRecordListResult.data;
       const parseResult = parseData(
         parsedData,
-        "getScoreboard",
+        req.command,
         PlantRecordArraySchema,
       );
       if (!parseResult.success) {

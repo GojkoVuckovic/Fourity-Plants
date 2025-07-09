@@ -1,12 +1,23 @@
-import { parseData, processRequest, TABLE_NAME, BaseItemSchema } from "./utils";
+import {
+  parseData,
+  processRequest,
+  TABLE_NAME,
+  BaseItemSchema,
+  createQueryCommand,
+  createListResponse,
+} from "./utils";
 import {
   GetCommand,
   PutCommand,
-  QueryCommand,
   DynamoDBDocumentClient,
 } from "@aws-sdk/lib-dynamodb";
 import { createRequestSuccess, RequestResult } from "../requests";
-import { UpdatePlantRecordRequest, GetPlantRecordListRequest } from "../types";
+import {
+  UpdatePlantRecordRequest,
+  GetPlantRecordListRequest,
+  QueryResult,
+  ListResponse,
+} from "../types";
 import { z } from "zod";
 
 export const PlantRecordDataSchema = z.object({
@@ -57,14 +68,14 @@ export const plantRecordService = (db: DynamoDBDocumentClient) => {
         );
       const getPlantRecordResult = await processRequest(
         getPlantRecordCommand,
-        "updatePlantRecord",
+        req.command,
       );
       if (!getPlantRecordResult.success) {
         return getPlantRecordResult;
       }
       const plantRecordParse = parseData(
         getPlantRecordResult.data,
-        "updatePlantRecord",
+        req.command,
         PlantRecordSchema,
       );
       if (!plantRecordParse.success) {
@@ -98,12 +109,12 @@ export const plantRecordService = (db: DynamoDBDocumentClient) => {
         );
       const updatePlantRecordResult = await processRequest(
         updatePlantRecordCommand,
-        "updatePlantRecord",
+        req.command,
       );
       if (!updatePlantRecordResult.success) {
         return updatePlantRecordResult;
       }
-      return createRequestSuccess("updatePlantRecord")(
+      return createRequestSuccess(req.command)(
         {
           uuid: plantRecord.SK,
           resolved: plantRecord.data.resolved,
@@ -120,35 +131,32 @@ export const plantRecordService = (db: DynamoDBDocumentClient) => {
     },
     async getPlantRecordList(
       req: GetPlantRecordListRequest,
-    ): Promise<RequestResult<"getPlantRecordList", PlantRecord[]>> {
-      const getPlantRecordListCommand = async () => {
-        const { Items } = await db.send(
-          new QueryCommand({
-            TableName: TABLE_NAME,
-            IndexName: "TypeIndex",
-            KeyConditionExpression: "#typeAttr = :typeValue",
-            ExpressionAttributeNames: {
-              "#typeAttr": "type",
-            },
-            ExpressionAttributeValues: {
-              ":typeValue": "plantRecord",
-            },
-          }),
+    ): Promise<
+      RequestResult<"getPlantRecordList", ListResponse<Array<PlantRecord>>>
+    > {
+      const getPlantRecordListCommand = async (): Promise<QueryResult> => {
+        const { Items, LastEvaluatedKey } = await db.send(
+          createQueryCommand(req.payload, "PLANT_TYPE"),
         );
-        return Items;
+        return { Items, LastEvaluatedKey };
       };
       const getPlantRecordListResult = await processRequest(
         getPlantRecordListCommand,
-        "getPlantRecordList",
+        req.command,
       );
       if (!getPlantRecordListResult.success) return getPlantRecordListResult;
-      const parsedData = getPlantRecordListResult.data;
+      const parsedData = getPlantRecordListResult.data.Items;
       const parseResult = parseData(
         parsedData,
-        "getPlantRecordList",
+        req.command,
         PlantRecordArraySchema,
       );
-      return parseResult;
+      if (!parseResult.success) return parseResult;
+      const listResponse = createListResponse(
+        parseResult.data,
+        getPlantRecordListResult.data.LastEvaluatedKey,
+      );
+      return createRequestSuccess(req.command)(listResponse, 200, "");
     },
   };
 };

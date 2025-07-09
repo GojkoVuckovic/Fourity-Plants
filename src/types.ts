@@ -2,6 +2,24 @@ import { PlantType, CreatePlantTypeDto } from "./service/plant_type";
 import { Plant, CreatePlantDTO } from "./service/plant";
 import { CreateZoneDTO, Zone } from "./service/zone";
 
+export type ListPayload = {
+  pageSize?: number;
+  startKey?: {
+    PK: string;
+    SK: string;
+  };
+};
+
+export type ListResponse<T> = {
+  data: T;
+  lastKey?: Record<string, any>;
+};
+
+export type QueryResult = {
+  Items?: Record<string, any>;
+  LastEvaluatedKey?: Record<string, any>;
+};
+
 export type CreatePlantRequest = {
   command: "createPlant";
   payload: CreatePlantDTO;
@@ -24,7 +42,7 @@ export type GetPlantRequest = {
 
 export type GetPlantListRequest = {
   command: "getPlantList";
-  payload?: never;
+  payload: ListPayload;
 };
 
 export type CreatePlantTypeRequest = {
@@ -49,7 +67,7 @@ export type GetPlantTypeRequest = {
 
 export type GetPlantTypeListRequest = {
   command: "getPlantTypeList";
-  payload?: never;
+  payload: ListPayload;
 };
 
 export type CreateZoneRequest = {
@@ -74,7 +92,7 @@ export type GetZoneRequest = {
 
 export type GetZoneListRequest = {
   command: "getZoneList";
-  payload?: never;
+  payload: ListPayload;
 };
 
 export type UpdatePlantRecordRequest = {
@@ -84,7 +102,7 @@ export type UpdatePlantRecordRequest = {
 
 export type GetPlantRecordListRequest = {
   command: "getPlantRecordList";
-  payload?: never;
+  payload: ListPayload;
 };
 
 export type CreateScheduleRequest = {
@@ -107,40 +125,40 @@ export type GetEmployeeNamesRequest = {
   payload: { employeeNames: string[] };
 };
 
-export type EmployeeRequests = GetEmployeeNamesRequest;
-
-type PlantRequests =
-  | CreatePlantRequest
-  | UpdatePlantRequest
-  | DeletePlantRequest
-  | GetPlantRequest
-  | GetPlantListRequest;
-
-type PlantRecordRequests = UpdatePlantRecordRequest | GetPlantRecordListRequest;
-
-type PlantTypeRequests =
-  | CreatePlantTypeRequest
-  | UpdatePlantTypeRequest
-  | DeletePlantTypeRequest
-  | GetPlantTypeRequest
-  | GetPlantTypeListRequest;
-
-type ScheduleRequests = CreateScheduleRequest | GetScheduleRequest;
-
-type ScoreboardRequests = GetScoreboardRequest;
-
-type ZoneRequests =
-  | CreateZoneRequest
-  | UpdateZoneRequest
-  | DeleteZoneRequest
-  | GetZoneRequest
+export type ListRequests =
+  | GetPlantListRequest
+  | GetPlantRecordListRequest
+  | GetPlantTypeListRequest
   | GetZoneListRequest;
 
+export type GetRequests =
+  | GetEmployeeNamesRequest
+  | GetPlantRequest
+  | GetPlantTypeRequest
+  | GetZoneRequest
+  | GetScheduleRequest
+  | GetScoreboardRequest;
+
+export type CreateRequests =
+  | CreatePlantRequest
+  | CreatePlantTypeRequest
+  | CreateZoneRequest
+  | CreateScheduleRequest;
+
+export type PutRequests =
+  | UpdatePlantRequest
+  | UpdatePlantTypeRequest
+  | UpdateZoneRequest
+  | UpdatePlantRecordRequest;
+
+export type DeleteRequests =
+  | DeletePlantRequest
+  | DeletePlantTypeRequest
+  | DeleteZoneRequest;
+
 export type Req =
-  | EmployeeRequests
-  | PlantRequests
-  | PlantRecordRequests
-  | PlantTypeRequests
-  | ScheduleRequests
-  | ScoreboardRequests
-  | ZoneRequests;
+  | ListRequests
+  | GetRequests
+  | CreateRequests
+  | PutRequests
+  | DeleteRequests;

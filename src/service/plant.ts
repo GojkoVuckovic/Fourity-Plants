@@ -1,9 +1,15 @@
-import { parseData, processRequest, TABLE_NAME, BaseItemSchema } from "./utils";
+import {
+  parseData,
+  processRequest,
+  TABLE_NAME,
+  BaseItemSchema,
+  createQueryCommand,
+  createListResponse,
+} from "./utils";
 import {
   GetCommand,
   PutCommand,
   DeleteCommand,
-  QueryCommand,
   DynamoDBDocumentClient,
 } from "@aws-sdk/lib-dynamodb";
 import { createRequestSuccess, RequestResult } from "../requests";
@@ -13,6 +19,8 @@ import {
   DeletePlantRequest,
   GetPlantRequest,
   GetPlantListRequest,
+  ListResponse,
+  QueryResult,
 } from "../types";
 
 import { v4 as uuidv4 } from "uuid";
@@ -64,13 +72,13 @@ export const plantService = (db: DynamoDBDocumentClient) => {
         return Item;
       };
 
-      const getPlantResult = await processRequest(getPlantCommand, "getPlant");
+      const getPlantResult = await processRequest(getPlantCommand, req.command);
 
       if (!getPlantResult.success) {
         return getPlantResult;
       }
       const item = getPlantResult.data;
-      const parserResult = parseData(item, "getPlant", PlantDtoSchema);
+      const parserResult = parseData(item, req.command, PlantDtoSchema);
       return parserResult;
     },
     async createPlant(
@@ -90,7 +98,7 @@ export const plantService = (db: DynamoDBDocumentClient) => {
       };
       const getPlantTypeResult = await processRequest(
         getPlantTypeCommand,
-        "createPlant",
+        req.command,
       );
       if (!getPlantTypeResult.success) {
         return getPlantTypeResult;
@@ -108,16 +116,13 @@ export const plantService = (db: DynamoDBDocumentClient) => {
           );
           return Item;
         };
-        const getZoneResult = await processRequest(
-          getZoneCommand,
-          "createPlant",
-        );
+        const getZoneResult = await processRequest(getZoneCommand, req.command);
         if (!getZoneResult.success) {
           return getZoneResult;
         }
       }
       const item = req.payload;
-      const parserResult = parseData(item, "createPlant", PlantDataSchema);
+      const parserResult = parseData(item, req.command, PlantDataSchema);
       if (!parserResult.success) {
         return parserResult;
       }
@@ -144,12 +149,12 @@ export const plantService = (db: DynamoDBDocumentClient) => {
         );
       const createPlantResult = await processRequest(
         createPlantCommand,
-        "createPlant",
+        req.command,
       );
       if (!createPlantResult.success) {
         return createPlantResult;
       }
-      return createRequestSuccess("createPlant")(
+      return createRequestSuccess(req.command)(
         parserResult.data,
         createPlantResult.code,
         createPlantResult.message,
@@ -171,10 +176,7 @@ export const plantService = (db: DynamoDBDocumentClient) => {
         return Item;
       };
 
-      const getPlantResult = await processRequest(
-        getPlantCommand,
-        "updatePlant",
-      );
+      const getPlantResult = await processRequest(getPlantCommand, req.command);
 
       if (!getPlantResult.success) {
         return getPlantResult;
@@ -194,7 +196,7 @@ export const plantService = (db: DynamoDBDocumentClient) => {
       };
       const getPlantTypeResult = await processRequest(
         getPlantTypeCommand,
-        "updatePlant",
+        req.command,
       );
       if (!getPlantTypeResult.success) {
         return getPlantTypeResult;
@@ -211,12 +213,12 @@ export const plantService = (db: DynamoDBDocumentClient) => {
         );
         return Item;
       };
-      const getZoneResult = await processRequest(getZoneCommand, "updatePlant");
+      const getZoneResult = await processRequest(getZoneCommand, req.command);
       if (!getZoneResult.success) {
         return getZoneResult;
       }
       const item = req.payload;
-      const parserResult = parseData(item, "updatePlant", PlantDtoSchema);
+      const parserResult = parseData(item, req.command, PlantDtoSchema);
       if (!parserResult.success) {
         return parserResult;
       }
@@ -242,12 +244,12 @@ export const plantService = (db: DynamoDBDocumentClient) => {
         );
       const updatePlantResult = await processRequest(
         updatePlantCommand,
-        "updatePlant",
+        req.command,
       );
       if (!updatePlantResult.success) {
         return updatePlantResult;
       }
-      return createRequestSuccess("updatePlant")(
+      return createRequestSuccess(req.command)(
         parserResult.data,
         updatePlantResult.code,
         updatePlantResult.message,
@@ -269,10 +271,7 @@ export const plantService = (db: DynamoDBDocumentClient) => {
         return Item;
       };
 
-      const getPlantResult = await processRequest(
-        getPlantCommand,
-        "deletePlant",
-      );
+      const getPlantResult = await processRequest(getPlantCommand, req.command);
 
       if (!getPlantResult.success) {
         return getPlantResult;
@@ -286,41 +285,36 @@ export const plantService = (db: DynamoDBDocumentClient) => {
         );
       const deletePlantResult = await processRequest(
         deletePlantCommand,
-        "deletePlant",
+        req.command,
       );
       return deletePlantResult;
     },
     async getPlantList(
       req: GetPlantListRequest,
-    ): Promise<RequestResult<"getPlantList", Plant[]>> {
-      const getPlantListCommand = async () => {
-        const { Items } = await db.send(
-          new QueryCommand({
-            TableName: TABLE_NAME,
-            IndexName: "TypeIndex",
-            KeyConditionExpression: "#typeAttr = :typeValue",
-            ExpressionAttributeNames: {
-              "#typeAttr": "type",
-            },
-            ExpressionAttributeValues: {
-              ":typeValue": "PLANT",
-            },
-          }),
+    ): Promise<RequestResult<"getPlantList", ListResponse<Array<Plant>>>> {
+      const getPlantListCommand = async (): Promise<QueryResult> => {
+        const { Items, LastEvaluatedKey } = await db.send(
+          createQueryCommand(req.payload, "PLANT"),
         );
-        return Items;
+        return { Items, LastEvaluatedKey };
       };
       const getPlantListResult = await processRequest(
         getPlantListCommand,
-        "getPlantList",
+        req.command,
       );
       if (!getPlantListResult.success) return getPlantListResult;
-      const parsedData = getPlantListResult.data;
+      const parsedData = getPlantListResult.data.Items;
       const parseResult = parseData(
         parsedData,
-        "getPlantList",
+        req.command,
         PlantDtoArraySchema,
       );
-      return parseResult;
+      if (!parseResult.success) return parseResult;
+      const listResponse = createListResponse(
+        parseResult.data,
+        getPlantListResult.data.LastEvaluatedKey,
+      );
+      return createRequestSuccess(req.command)(listResponse, 200, "");
     },
   };
 };

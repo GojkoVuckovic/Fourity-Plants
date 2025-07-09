@@ -7,7 +7,7 @@ import * as plant from "./plant";
 import * as schedule from "./schedule";
 import * as scoreboard from "./scoreboard";
 import * as zone from "./zone";
-import { assertUnreachable } from "./utils";
+import { assertUnreachable, isListRequest, resolveListRequest } from "./utils";
 import { Req } from "../types";
 
 const client = new DynamoDBClient({});
@@ -21,6 +21,7 @@ const scoreboardServiceInstance = scoreboard.scoreboardService(docClient);
 const zoneServiceInstance = zone.ZoneService(docClient);
 
 export const ProcessRequest = async (data: Req) => {
+  const paginationData = isListRequest(data) ? resolveListRequest(data) : {};
   switch (data.command) {
     case "createPlant":
       return plantServiceInstance.createPlant(data);
@@ -31,7 +32,7 @@ export const ProcessRequest = async (data: Req) => {
     case "getPlant":
       return plantServiceInstance.getPlant(data);
     case "getPlantList":
-      return plantServiceInstance.getPlantList(data);
+      return plantServiceInstance.getPlantList({ ...data, ...paginationData });
     case "createPlantType":
       return plantTypeServiceInstance.createPlantType(data);
     case "updatePlantType":
@@ -41,7 +42,10 @@ export const ProcessRequest = async (data: Req) => {
     case "getPlantType":
       return plantTypeServiceInstance.getPlantType(data);
     case "getPlantTypeList":
-      return plantTypeServiceInstance.getPlantTypeList(data);
+      return plantTypeServiceInstance.getPlantTypeList({
+        ...data,
+        ...paginationData,
+      });
     case "createZone":
       return zoneServiceInstance.createZone(data);
     case "updateZone":
@@ -51,11 +55,14 @@ export const ProcessRequest = async (data: Req) => {
     case "getZone":
       return zoneServiceInstance.getZone(data);
     case "getZoneList":
-      return zoneServiceInstance.getZoneList(data);
+      return zoneServiceInstance.getZoneList({ ...data, ...paginationData });
     case "updatePlantRecord":
       return plantRecordServiceInstance.updatePlantRecord(data);
     case "getPlantRecordList":
-      return plantRecordServiceInstance.getPlantRecordList(data);
+      return plantRecordServiceInstance.getPlantRecordList({
+        ...data,
+        ...paginationData,
+      });
     case "createSchedule":
       return scheduleServiceInstance.createSchedule(data);
     case "getSchedule":
