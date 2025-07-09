@@ -75,25 +75,21 @@ export const plantTypeService = (db: DynamoDBDocumentClient) => {
 
       const getPlantTypeResult = await processRequest(
         getPlantTypeCommand,
-        "getPlantType",
+        req.command,
       );
 
       if (!getPlantTypeResult.success) {
         return getPlantTypeResult;
       }
       const item = getPlantTypeResult.data;
-      const parserResult = parseData(item, "getPlantType", PlantTypeDtoSchema);
+      const parserResult = parseData(item, req.command, PlantTypeDtoSchema);
       return parserResult;
     },
     async createPlantType(
       req: CreatePlantTypeRequest,
     ): Promise<RequestResult<"createPlantType", CreatePlantTypeDto>> {
       const item = req.payload;
-      const parserResult = parseData(
-        item,
-        "createPlantType",
-        PlantTypeDataSchema,
-      );
+      const parserResult = parseData(item, req.command, PlantTypeDataSchema);
       if (!parserResult.success) {
         return parserResult;
       }
@@ -120,12 +116,12 @@ export const plantTypeService = (db: DynamoDBDocumentClient) => {
         );
       const createPlantTypeResult = await processRequest(
         createPlantTypeCommand,
-        "createPlantType",
+        req.command,
       );
       if (!createPlantTypeResult.success) {
         return createPlantTypeResult;
       }
-      return createRequestSuccess("createPlantType")(
+      return createRequestSuccess(req.command)(
         parserResult.data,
         createPlantTypeResult.code,
         createPlantTypeResult.message,
@@ -148,13 +144,13 @@ export const plantTypeService = (db: DynamoDBDocumentClient) => {
       };
       const getPlantTypeResult = await processRequest(
         getPlantTypeCommand,
-        "updatePlantType",
+        req.command,
       );
       if (!getPlantTypeResult.success) {
         return getPlantTypeResult;
       }
       const item = req.payload;
-      const parserResult = parseData(item, "updatePlantType", PlantTypeSchema);
+      const parserResult = parseData(item, req.command, PlantTypeSchema);
       if (!parserResult.success) {
         return parserResult;
       }
@@ -180,12 +176,12 @@ export const plantTypeService = (db: DynamoDBDocumentClient) => {
         );
       const updatePlantTypeResult = await processRequest(
         updatePlantTypeCommand,
-        "updatePlantType",
+        req.command,
       );
       if (!updatePlantTypeResult.success) {
         return updatePlantTypeResult;
       }
-      return createRequestSuccess("updatePlantType")(
+      return createRequestSuccess(req.command)(
         req.payload,
         updatePlantTypeResult.code,
         updatePlantTypeResult.message,
@@ -208,7 +204,7 @@ export const plantTypeService = (db: DynamoDBDocumentClient) => {
       };
       const getPlantTypeResult = await processRequest(
         getPlantTypeCommand,
-        "deletePlantType",
+        req.command,
       );
       if (!getPlantTypeResult.success) {
         return getPlantTypeResult;
@@ -225,7 +221,7 @@ export const plantTypeService = (db: DynamoDBDocumentClient) => {
         );
       const deletePlantTypeResult = await processRequest(
         deletePlantTypeCommand,
-        "deletePlantType",
+        req.command,
       );
       if (!deletePlantTypeResult.success) {
         return deletePlantTypeResult;
@@ -245,7 +241,7 @@ export const plantTypeService = (db: DynamoDBDocumentClient) => {
       };
       const getPlantTypeUuidListResult = await processRequest(
         getPlantTypeUuidListCommand,
-        "deletePlantType",
+        req.command,
       );
       if (!getPlantTypeUuidListResult.success) {
         return getPlantTypeUuidListResult;
@@ -253,7 +249,7 @@ export const plantTypeService = (db: DynamoDBDocumentClient) => {
       const plantTypeUuidData = getPlantTypeUuidListResult.data;
       const plantTypeUiidListResult = parseData(
         plantTypeUuidData,
-        "deletePlantType",
+        req.command,
         PlantArraySchema,
       );
       if (!plantTypeUiidListResult.success) {
@@ -272,13 +268,13 @@ export const plantTypeService = (db: DynamoDBDocumentClient) => {
           );
         const updatePlantResult = await processRequest(
           updatePlantCommand,
-          "deletePlantType",
+          req.command,
         );
         if (!updatePlantResult.success) {
           return updatePlantResult;
         }
       });
-      return createRequestSuccess("deletePlantType")(
+      return createRequestSuccess(req.command)(
         req.payload.uuid,
         400,
         "Plant type deleted successfully",

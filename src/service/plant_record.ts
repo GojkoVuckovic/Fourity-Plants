@@ -68,14 +68,14 @@ export const plantRecordService = (db: DynamoDBDocumentClient) => {
         );
       const getPlantRecordResult = await processRequest(
         getPlantRecordCommand,
-        "updatePlantRecord",
+        req.command,
       );
       if (!getPlantRecordResult.success) {
         return getPlantRecordResult;
       }
       const plantRecordParse = parseData(
         getPlantRecordResult.data,
-        "updatePlantRecord",
+        req.command,
         PlantRecordSchema,
       );
       if (!plantRecordParse.success) {
@@ -109,12 +109,12 @@ export const plantRecordService = (db: DynamoDBDocumentClient) => {
         );
       const updatePlantRecordResult = await processRequest(
         updatePlantRecordCommand,
-        "updatePlantRecord",
+        req.command,
       );
       if (!updatePlantRecordResult.success) {
         return updatePlantRecordResult;
       }
-      return createRequestSuccess("updatePlantRecord")(
+      return createRequestSuccess(req.command)(
         {
           uuid: plantRecord.SK,
           resolved: plantRecord.data.resolved,

@@ -125,46 +125,40 @@ export type GetEmployeeNamesRequest = {
   payload: { employeeNames: string[] };
 };
 
-export type EmployeeRequests = GetEmployeeNamesRequest;
-
-type PlantRequests =
-  | CreatePlantRequest
-  | UpdatePlantRequest
-  | DeletePlantRequest
-  | GetPlantRequest
-  | GetPlantListRequest;
-
-type PlantRecordRequests = UpdatePlantRecordRequest | GetPlantRecordListRequest;
-
-type PlantTypeRequests =
-  | CreatePlantTypeRequest
-  | UpdatePlantTypeRequest
-  | DeletePlantTypeRequest
-  | GetPlantTypeRequest
-  | GetPlantTypeListRequest;
-
-type ScheduleRequests = CreateScheduleRequest | GetScheduleRequest;
-
-type ScoreboardRequests = GetScoreboardRequest;
-
 export type ListRequests =
   | GetPlantListRequest
   | GetPlantRecordListRequest
   | GetPlantTypeListRequest
   | GetZoneListRequest;
 
-type ZoneRequests =
-  | CreateZoneRequest
-  | UpdateZoneRequest
-  | DeleteZoneRequest
+export type GetRequests =
+  | GetEmployeeNamesRequest
+  | GetPlantRequest
+  | GetPlantTypeRequest
   | GetZoneRequest
-  | GetZoneListRequest;
+  | GetScheduleRequest
+  | GetScoreboardRequest;
+
+export type CreateRequests =
+  | CreatePlantRequest
+  | CreatePlantTypeRequest
+  | CreateZoneRequest
+  | CreateScheduleRequest;
+
+export type PutRequests =
+  | UpdatePlantRequest
+  | UpdatePlantTypeRequest
+  | UpdateZoneRequest
+  | UpdatePlantRecordRequest;
+
+export type DeleteRequests =
+  | DeletePlantRequest
+  | DeletePlantTypeRequest
+  | DeleteZoneRequest;
 
 export type Req =
-  | EmployeeRequests
-  | PlantRequests
-  | PlantRecordRequests
-  | PlantTypeRequests
-  | ScheduleRequests
-  | ScoreboardRequests
-  | ZoneRequests;
+  | ListRequests
+  | GetRequests
+  | CreateRequests
+  | PutRequests
+  | DeleteRequests;

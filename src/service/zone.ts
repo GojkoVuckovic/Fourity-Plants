@@ -69,20 +69,20 @@ export const ZoneService = (db: DynamoDBDocumentClient) => {
         return Item;
       };
 
-      const getZoneResult = await processRequest(getZoneCommand, "getZone");
+      const getZoneResult = await processRequest(getZoneCommand, req.command);
 
       if (!getZoneResult.success) {
         return getZoneResult;
       }
       const item = getZoneResult.data;
-      const parserResult = parseData(item, "getZone", ZoneDtoSchema);
+      const parserResult = parseData(item, req.command, ZoneDtoSchema);
       return parserResult;
     },
     async createZone(
       req: CreateZoneRequest,
     ): Promise<RequestResult<"createZone", CreateZoneDTO>> {
       const item = req.payload;
-      const parserResult = parseData(item, "createZone", ZoneDataSchema);
+      const parserResult = parseData(item, req.command, ZoneDataSchema);
       if (!parserResult.success) {
         return parserResult;
       }
@@ -107,12 +107,12 @@ export const ZoneService = (db: DynamoDBDocumentClient) => {
         );
       const createZoneResult = await processRequest(
         createZoneCommand,
-        "createZone",
+        req.command,
       );
       if (!createZoneResult.success) {
         return createZoneResult;
       }
-      return createRequestSuccess("createZone")(
+      return createRequestSuccess(req.command)(
         parserResult.data,
         createZoneResult.code,
         createZoneResult.message,
@@ -133,12 +133,12 @@ export const ZoneService = (db: DynamoDBDocumentClient) => {
         );
         return Item;
       };
-      const getZoneResult = await processRequest(getZoneCommand, "updateZone");
+      const getZoneResult = await processRequest(getZoneCommand, req.command);
       if (!getZoneResult.success) {
         return getZoneResult;
       }
       const item = req.payload;
-      const parserResult = parseData(item, "updateZone", ZoneDtoSchema);
+      const parserResult = parseData(item, req.command, ZoneDtoSchema);
       if (!parserResult.success) {
         return parserResult;
       }
@@ -162,12 +162,12 @@ export const ZoneService = (db: DynamoDBDocumentClient) => {
         );
       const updateZoneResult = await processRequest(
         updateZoneCommand,
-        "updateZone",
+        req.command,
       );
       if (!updateZoneResult.success) {
         return updateZoneResult;
       }
-      return createRequestSuccess("updateZone")(
+      return createRequestSuccess(req.command)(
         req.payload,
         updateZoneResult.code,
         updateZoneResult.message,
@@ -188,7 +188,7 @@ export const ZoneService = (db: DynamoDBDocumentClient) => {
         );
         return Item;
       };
-      const getZoneResult = await processRequest(getZoneCommand, "deleteZone");
+      const getZoneResult = await processRequest(getZoneCommand, req.command);
       if (!getZoneResult.success) {
         return getZoneResult;
       }
@@ -204,7 +204,7 @@ export const ZoneService = (db: DynamoDBDocumentClient) => {
         );
       const deleteZoneResult = await processRequest(
         deleteZoneCommand,
-        "deleteZone",
+        req.command,
       );
       if (!deleteZoneResult.success) {
         return deleteZoneResult;
@@ -224,7 +224,7 @@ export const ZoneService = (db: DynamoDBDocumentClient) => {
       };
       const getZoneUuidListResult = await processRequest(
         getZoneUuidListCommand,
-        "deleteZone",
+        req.command,
       );
       if (!getZoneUuidListResult.success) {
         return getZoneUuidListResult;
@@ -232,7 +232,7 @@ export const ZoneService = (db: DynamoDBDocumentClient) => {
       const zoneUuidData = getZoneUuidListResult.data;
       const zoneUiidListResult = parseData(
         zoneUuidData,
-        "deleteZone",
+        req.command,
         PlantArraySchema,
       );
       if (!zoneUiidListResult.success) {
@@ -251,13 +251,13 @@ export const ZoneService = (db: DynamoDBDocumentClient) => {
           );
         const updatePlantResult = await processRequest(
           updatePlantCommand,
-          "deleteZone",
+          req.command,
         );
         if (!updatePlantResult.success) {
           return updatePlantResult;
         }
       });
-      return createRequestSuccess("deleteZone")(
+      return createRequestSuccess(req.command)(
         req.payload.uuid,
         400,
         "Zone deleted successfully",
