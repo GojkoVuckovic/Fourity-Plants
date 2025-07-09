@@ -265,21 +265,26 @@ export const ZoneService = (db: DynamoDBDocumentClient) => {
     },
     async getZoneList(
       req: GetZoneListRequest,
-    ): Promise<RequestResult<"getZoneList", Zone[]>> {
-      const getZoneListCommand = async () => {
-        const { Items } = await db.send(
+    ): Promise<RequestResult<"getZoneList", ListResponse<Array<Zone>>>> {
+      const getZoneListCommand = async (): Promise<QueryResult> => {
+        const { Items, LastEvaluatedKey } = await db.send(
           createQueryCommand(req.payload, "ZONE"),
         );
-        return Items;
+        return { Items, LastEvaluatedKey };
       };
       const getZoneListResult = await processRequest(
         getZoneListCommand,
-        "getZoneList",
+        req.command,
       );
       if (!getZoneListResult.success) return getZoneListResult;
-      const parsedData = getZoneListResult.data;
-      const parseResult = parseData(parsedData, "getZoneList", ZoneArraySchema);
-      return parseResult;
+      const parsedData = getZoneListResult.data.Items;
+      const parseResult = parseData(parsedData, req.command, ZoneArraySchema);
+      if (!parseResult.success) return parseResult;
+      const listResponse = createListResponse(
+        parseResult.data,
+        getZoneListResult.data.LastEvaluatedKey,
+      );
+      return createRequestSuccess(req.command)(listResponse, 200, "");
     },
   };
 };

@@ -7,7 +7,7 @@ import * as plant from "./plant";
 import * as schedule from "./schedule";
 import * as scoreboard from "./scoreboard";
 import * as zone from "./zone";
-import { assertUnreachable, resolveListRequest } from "./utils";
+import { assertUnreachable, isListRequest, resolveListRequest } from "./utils";
 import { Req } from "../types";
 
 const client = new DynamoDBClient({});
@@ -21,6 +21,9 @@ const scoreboardServiceInstance = scoreboard.scoreboardService(docClient);
 const zoneServiceInstance = zone.ZoneService(docClient);
 
 export const ProcessRequest = async (data: Req) => {
+  if (isListRequest(data)) {
+    data = resolveListRequest(data);
+  }
   switch (data.command) {
     case "createPlant":
       return plantServiceInstance.createPlant(data);
@@ -31,8 +34,7 @@ export const ProcessRequest = async (data: Req) => {
     case "getPlant":
       return plantServiceInstance.getPlant(data);
     case "getPlantList":
-      const plantListRequestData = resolveListRequest(data);
-      return plantServiceInstance.getPlantList(plantListRequestData);
+      return plantServiceInstance.getPlantList(data);
     case "createPlantType":
       return plantTypeServiceInstance.createPlantType(data);
     case "updatePlantType":
@@ -42,10 +44,7 @@ export const ProcessRequest = async (data: Req) => {
     case "getPlantType":
       return plantTypeServiceInstance.getPlantType(data);
     case "getPlantTypeList":
-      const plantTypeListRequestData = resolveListRequest(data);
-      return plantTypeServiceInstance.getPlantTypeList(
-        plantTypeListRequestData,
-      );
+      return plantTypeServiceInstance.getPlantTypeList(data);
     case "createZone":
       return zoneServiceInstance.createZone(data);
     case "updateZone":
@@ -55,15 +54,11 @@ export const ProcessRequest = async (data: Req) => {
     case "getZone":
       return zoneServiceInstance.getZone(data);
     case "getZoneList":
-      const zoneListRequestData = resolveListRequest(data);
-      return zoneServiceInstance.getZoneList(zoneListRequestData);
+      return zoneServiceInstance.getZoneList(data);
     case "updatePlantRecord":
       return plantRecordServiceInstance.updatePlantRecord(data);
     case "getPlantRecordList":
-      const plantRecordListRequestData = resolveListRequest(data);
-      return plantRecordServiceInstance.getPlantRecordList(
-        plantRecordListRequestData,
-      );
+      return plantRecordServiceInstance.getPlantRecordList(data);
     case "createSchedule":
       return scheduleServiceInstance.createSchedule(data);
     case "getSchedule":

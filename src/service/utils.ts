@@ -6,7 +6,7 @@ import {
   RequestResult,
 } from "../requests";
 import { z } from "zod";
-import { ListPayload, ListRequests, ListResponse } from "@src/types";
+import { ListPayload, ListRequests, ListResponse, Req } from "@src/types";
 
 export const TABLE_NAME = process.env.TABLE_NAME || "Table";
 
@@ -109,3 +109,12 @@ export const createListResponse = <T>(
   data,
   lastKey,
 });
+
+export const isListRequest = (request: Req): request is ListRequests => {
+  return (
+    request.command === "getZoneList" ||
+    request.command === "getPlantList" ||
+    request.command === "getPlantTypeList" ||
+    request.command === "getPlantRecordList"
+  );
+};
