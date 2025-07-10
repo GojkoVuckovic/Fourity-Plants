@@ -24,6 +24,7 @@
 		"@aws-sdk/client-dynamodb": "^3.x.x",
 		"@aws-sdk/client-lambda": "^3.830.0",
 		"@aws-sdk/lib-dynamodb": "^3.x.x",
+		"@slack/web-api": "^7.9.3",
 		"@smithy/types": "^4.3.1",
 		"uuid": "^11.1.0",
 		"zod": "^3.25.67"

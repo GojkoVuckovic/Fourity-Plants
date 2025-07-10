@@ -82,14 +82,18 @@ export const plantRecordService = (db: DynamoDBDocumentClient) => {
         return plantRecordParse;
       }
       const plantRecord = plantRecordParse.data;
+      const now = new Date();
+      now.setUTCHours(0, 0, 0, 0);
+      const isoString = now.toISOString();
+      plantRecord.data.date = isoString;
       plantRecord.data.resolved = true;
       plantRecord.data.additionalInfo = req.payload.additionalInfo;
       const plantRecordDatabase: PlantRecordDatabase = {
         PK: plantRecord.PK,
         SK: plantRecord.SK,
         type: "plantRecord",
-        GSI: plantRecord.SK,
-        GSI2: "",
+        GSI: plantRecord.data.plantUuid,
+        GSI2: plantRecord.data.date,
         data: {
           resolved: plantRecord.data.resolved,
           additionalInfo: plantRecord.data.additionalInfo,

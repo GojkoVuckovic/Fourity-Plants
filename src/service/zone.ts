@@ -92,7 +92,7 @@ export const ZoneService = (db: DynamoDBDocumentClient) => {
         SK: zoneUuid,
         type: "ZONE",
         GSI: parserResult.data.name,
-        GSI2: "",
+        GSI2: zoneUuid,
         data: {
           name: parserResult.data.name,
           employees: parserResult.data.employees,

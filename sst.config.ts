@@ -54,10 +54,11 @@ export default $config({
         GSI: "string",
         GSI2: "string",
       },
-      primaryIndex: { hashKey: "PK", rangeKey: "uuid" },
+      primaryIndex: { hashKey: "PK", rangeKey: "SK" },
       globalIndexes: {
-        TypeIndex: { hashKey: "type", rangeKey: "uuid" },
-        GSIndex: { hashKey: "GSI", rangeKey: "uuid" },
+        TypeIndex: { hashKey: "type", rangeKey: "SK" },
+        GSIndex: { hashKey: "GSI", rangeKey: "SK" },
+        GSIndex2: { hashKey: "GSI2", rangeKey: "SK" },
       },
     });
 
@@ -67,6 +68,8 @@ export default $config({
       url: true,
       environment: {
         TABLE_NAME: table.name,
+        SLACK_BOT_TOKEN:
+          "xoxb-331668881095-9177687539988-49rXBxTXMTVp86bl3RUVFgTN",
       },
     });
   },

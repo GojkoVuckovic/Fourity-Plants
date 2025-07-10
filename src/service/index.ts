@@ -1,5 +1,6 @@
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import { DynamoDBDocumentClient } from "@aws-sdk/lib-dynamodb";
+import { WebClient } from "@slack/web-api";
 import * as employee from "./employee";
 import * as plant_record from "./plant_record";
 import * as plant_type from "./plant_type";
@@ -12,11 +13,15 @@ import { Req } from "../types";
 
 const client = new DynamoDBClient({});
 const docClient = DynamoDBDocumentClient.from(client);
+const slackClient = new WebClient(process.env.SLACK_BOT_TOKEN);
 const plantServiceInstance = plant.plantService(docClient);
 const plantRecordServiceInstance = plant_record.plantRecordService(docClient);
-const employeeServiceInstance = employee.employeeService(docClient);
+const employeeServiceInstance = employee.employeeService(slackClient);
 const plantTypeServiceInstance = plant_type.plantTypeService(docClient);
-const scheduleServiceInstance = schedule.scheduleService(docClient);
+const scheduleServiceInstance = schedule.scheduleService(
+  docClient,
+  slackClient,
+);
 const scoreboardServiceInstance = scoreboard.scoreboardService(docClient);
 const zoneServiceInstance = zone.ZoneService(docClient);
 

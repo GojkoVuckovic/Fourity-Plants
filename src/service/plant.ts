@@ -31,6 +31,8 @@ export const PlantDataSchema = z.object({
   plantTypeUuid: z.string().uuid(),
   name: z.string().min(1),
   additionalInfo: z.string().min(1).nullable().optional(),
+  waterRequirement: z.number().min(1),
+  sunRequirement: z.number().min(1),
 });
 
 export const PlantSchema = BaseItemSchema.extend({
@@ -138,6 +140,8 @@ export const plantService = (db: DynamoDBDocumentClient) => {
           name: parserResult.data.name,
           zoneUuid: parserResult.data.zoneUuid,
           additionalInfo: parserResult.data.additionalInfo,
+          waterRequirement: parserResult.data.waterRequirement,
+          sunRequirement: parserResult.data.sunRequirement,
         },
       };
       const createPlantCommand = async () =>
@@ -233,6 +237,8 @@ export const plantService = (db: DynamoDBDocumentClient) => {
           name: parserResult.data.name,
           zoneUuid: parserResult.data.zoneUuid,
           additionalInfo: parserResult.data.additionalInfo,
+          waterRequirement: parserResult.data.waterRequirement,
+          sunRequirement: parserResult.data.sunRequirement,
         },
       };
       const updatePlantCommand = async () =>

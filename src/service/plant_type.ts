@@ -159,7 +159,7 @@ export const plantTypeService = (db: DynamoDBDocumentClient) => {
         SK: parserResult.data.SK,
         type: "PLANT_TYPE",
         GSI: req.payload.name,
-        GSI2: "",
+        GSI2: parserResult.data.SK,
         data: {
           name: req.payload.name,
           picture: req.payload.picture,
@@ -181,6 +181,54 @@ export const plantTypeService = (db: DynamoDBDocumentClient) => {
       if (!updatePlantTypeResult.success) {
         return updatePlantTypeResult;
       }
+      const getPlantTypeUuidListCommand = async () => {
+        const { Items } = await db.send(
+          new QueryCommand({
+            TableName: TABLE_NAME,
+            IndexName: "GSI2ndex",
+            KeyConditionExpression: "GSI2 = :uuidValue",
+            ExpressionAttributeValues: {
+              ":uuidValue": req.payload.uuid,
+            },
+          }),
+        );
+        return Items;
+      };
+      const getPlantTypeUuidListResult = await processRequest(
+        getPlantTypeUuidListCommand,
+        req.command,
+      );
+      if (!getPlantTypeUuidListResult.success) {
+        return getPlantTypeUuidListResult;
+      }
+      const plantTypeUuidData = getPlantTypeUuidListResult.data;
+      const plantTypeUiidListResult = parseData(
+        plantTypeUuidData,
+        req.command,
+        PlantArraySchema,
+      );
+      if (!plantTypeUiidListResult.success) {
+        return plantTypeUiidListResult;
+      }
+      const plantList = plantTypeUiidListResult.data;
+      plantList.forEach(async (plant) => {
+        plant.data.waterRequirement = req.payload.waterRequirement;
+        plant.data.sunRequirement = req.payload.sunRequirement;
+        const updatePlantCommand = async () =>
+          await db.send(
+            new PutCommand({
+              TableName: TABLE_NAME,
+              Item: plant,
+            }),
+          );
+        const updatePlantResult = await processRequest(
+          updatePlantCommand,
+          req.command,
+        );
+        if (!updatePlantResult.success) {
+          return updatePlantResult;
+        }
+      });
       return createRequestSuccess(req.command)(
         req.payload,
         updatePlantTypeResult.code,

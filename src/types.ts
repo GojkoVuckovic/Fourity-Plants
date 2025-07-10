@@ -122,7 +122,9 @@ export type GetScoreboardRequest = {
 
 export type GetEmployeeNamesRequest = {
   command: "getEmployeeNames";
-  payload: { employeeNames: string[] };
+  payload: {
+    channel: string;
+  };
 };
 
 export type ListRequests =
