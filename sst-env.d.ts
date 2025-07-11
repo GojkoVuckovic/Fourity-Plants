@@ -10,6 +10,10 @@ declare module "sst" {
       "type": "sst.aws.Function"
       "url": string
     }
+    "SLACK_BOT_TOKEN": {
+      "type": "sst.sst.Secret"
+      "value": string
+    }
     "Table": {
       "name": string
       "type": "sst.aws.Dynamo"

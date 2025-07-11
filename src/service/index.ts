@@ -9,10 +9,11 @@ import * as scoreboard from "./scoreboard";
 import * as zone from "./zone";
 import { assertUnreachable, isListRequest, resolveListRequest } from "./utils";
 import { Req } from "../types";
+import { Resource } from "sst";
 
 const client = new DynamoDBClient({});
 const docClient = DynamoDBDocumentClient.from(client);
-const slackClient = new WebClient(process.env.SLACK_BOT_TOKEN);
+const slackClient = new WebClient(Resource.SLACK_BOT_TOKEN.value);
 const plantServiceInstance = plant.plantService(docClient);
 const plantRecordServiceInstance = plant_record.plantRecordService(docClient);
 const employeeServiceInstance = employee.employeeService(slackClient);
