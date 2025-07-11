@@ -114,7 +114,31 @@ export const isListRequest = (request: Req): request is ListRequests => {
   return (
     request.command === "getZoneList" ||
     request.command === "getPlantList" ||
-    request.command === "getPlantTypeList" ||
     request.command === "getPlantRecordList"
   );
+};
+
+const addDaysToUTCDate = (dateIso: string, days: number): Date => {
+  const date = new Date(dateIso);
+  date.setUTCDate(date.getUTCDate() + days);
+  date.setUTCHours(0, 0, 0, 0);
+  return date;
+};
+
+export const resolvePlantDuty = (
+  lastWateredIso: string,
+  lastSunlitIso: string,
+  waterReq: number,
+  sunReq: number,
+): { isWater: boolean; isSun: boolean } => {
+  const today = new Date();
+  today.setUTCHours(0, 0, 0, 0);
+
+  const nextWatered = addDaysToUTCDate(lastWateredIso, waterReq);
+  const nextSunlit = addDaysToUTCDate(lastSunlitIso, sunReq);
+
+  const isWater = nextWatered <= today;
+  const isSun = nextSunlit <= today;
+
+  return { isWater, isSun };
 };

@@ -1,17 +1,36 @@
 import { TABLE_NAME, processRequest, parseData } from "./utils";
-import { DynamoDBDocumentClient, QueryCommand } from "@aws-sdk/lib-dynamodb";
-import { createRequestFail, RequestResult } from "../requests";
+import {
+  DynamoDBDocumentClient,
+  QueryCommand,
+  GetCommand,
+  PutCommand,
+} from "@aws-sdk/lib-dynamodb";
+import {
+  createRequestFail,
+  createRequestSuccess,
+  RequestResult,
+} from "../requests";
 import { CreateScheduleRequest, GetScheduleRequest } from "../types";
 import {
   PlantRecordArraySchema,
   PlantRecord,
   PlantRecordSchema,
   PlantRecordDtoSchema,
+  PlantRecordDatabase,
 } from "./plant_record";
 import { WebClient } from "@slack/web-api";
 import { QueryResult } from "../types";
-import { createQueryCommand, createListResponse } from "./utils";
+import {
+  createQueryCommand,
+  createListResponse,
+  resolvePlantDuty,
+} from "./utils";
 import { PlantDtoArraySchema } from "./plant";
+import { ZoneDtoSchema } from "./zone";
+import { v4 as uuidv4 } from "uuid";
+import { never } from "zod";
+
+const CHANNEL_ID = process.env.CHANNEL_ID || "";
 
 export const scheduleService = (
   db: DynamoDBDocumentClient,
@@ -20,7 +39,7 @@ export const scheduleService = (
   return {
     async createSchedule(
       req: CreateScheduleRequest,
-    ): Promise<RequestResult<"createSchedule", string[]>> {
+    ): Promise<RequestResult<"createSchedule", void>> {
       const getPlantListCommand = async (): Promise<QueryResult> => {
         const { Items, LastEvaluatedKey } = await db.send(
           createQueryCommand({}, "PLANT"),
@@ -40,38 +59,106 @@ export const scheduleService = (
       );
       if (!parseResult.success) return parseResult;
       const plants = parseResult.data;
+      const zones = new Map<string, { index: number; employees: string[] }>();
+      const plantRecords: PlantRecordDatabase[] = [];
       for (const plant of plants) {
-        const getPlantRecordCommand = async (): Promise<QueryResult> => {
-          const { Items, LastEvaluatedKey } = await db.send(
-            new QueryCommand({
+        const { isWater, isSun } = resolvePlantDuty(
+          plant.lastTimeWatered,
+          plant.lastTimeSunlit,
+          plant.waterRequirement,
+          plant.sunRequirement,
+        );
+        if (!isWater && !isSun) {
+          continue;
+        }
+        if (!plant.zoneUuid) continue;
+        if (!zones.has(plant.zoneUuid)) {
+          const getZoneCommand = async () => {
+            const { Item } = await db.send(
+              new GetCommand({
+                TableName: TABLE_NAME,
+                Key: {
+                  PK: `ZONE#${plant.zoneUuid}`,
+                  SK: plant.zoneUuid,
+                },
+              }),
+            );
+            return Item;
+          };
+
+          const getZoneResult = await processRequest(
+            getZoneCommand,
+            req.command,
+          );
+
+          if (!getZoneResult.success) {
+            return getZoneResult;
+          }
+          const item = getZoneResult.data;
+          const parserResult = parseData(item, req.command, ZoneDtoSchema);
+          if (!parserResult.success) {
+            return parserResult;
+          }
+          const zone = parserResult.data;
+          zones.set(zone.uuid, { index: 0, employees: zone.employees });
+        }
+        const zone = zones.get(plant.zoneUuid)!;
+        const employee = zone.employees[zone.index];
+        zones.set(plant.zoneUuid, {
+          index: (zone.index + 1) % zones.values.length,
+          employees: zone.employees,
+        });
+        const plantRecordUuid: string = uuidv4();
+        const plantRecord: PlantRecordDatabase = {
+          PK: `PLANT_RECORD#${plantRecordUuid}`,
+          SK: plantRecordUuid,
+          type: "PLANT_RECORD",
+          GSI: plant.uuid,
+          GSI2: plantRecordUuid,
+          data: {
+            resolved: false,
+            additionalInfo: "",
+            plantUuid: plant.uuid,
+            employeeName: employee,
+            isWater: isWater,
+            isSun: isSun,
+            date: new Date().toString(),
+          },
+        };
+        const createPlantRecordCommand = async () =>
+          await db.send(
+            new PutCommand({
               TableName: TABLE_NAME,
-              IndexName: "GSIndex",
-              KeyConditionExpression: "GSI = :uuidValue",
-              ExpressionAttributeValues: {
-                ":uuidValue": plant.plantTypeUuid,
-              },
-              Limit: 1,
+              Item: plantRecord,
             }),
           );
-          return { Items, LastEvaluatedKey };
-        };
-        const getPlantRecordResult = await processRequest(
-          getPlantRecordCommand,
+        const createPlantRecordResult = await processRequest(
+          createPlantRecordCommand,
           req.command,
         );
-        if (!getPlantRecordResult.success) return getPlantRecordResult;
-        const parsedData = getPlantListResult.data.Items;
-        const parseResult = parseData(
-          parsedData,
-          req.command,
-          PlantRecordArraySchema,
-        );
-        if (!parseResult.success) return parseResult;
-        const plantRecord = parseResult.data[0];
-        const waterDate = new Date();
-        //TODO, implement way to differenciate date for watering and moving to sun
+        if (!createPlantRecordResult.success) {
+          return createPlantRecordResult;
+        }
+        plantRecords.push(plantRecord);
       }
-      return createRequestFail(req.command)(500, "NOT YET IMPLEMENTED");
+      const postScheduleCommand = async () => {
+        return await slack.chat.postMessage({
+          channel: CHANNEL_ID,
+          text: "Here will go the schedule",
+        });
+      };
+      const postScheduleResult = await processRequest(
+        postScheduleCommand,
+        req.command,
+      );
+      if (!postScheduleResult.success) {
+        return postScheduleResult;
+      }
+      return createRequestSuccess(req.command)(
+        undefined,
+        200,
+        "successfully created a schedule",
+      );
     },
     async getSchedule(
       req: GetScheduleRequest,

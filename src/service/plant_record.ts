@@ -31,7 +31,7 @@ export const PlantRecordDataSchema = z.object({
 });
 
 export const PlantRecordSchema = BaseItemSchema.extend({
-  type: z.literal("plantRecord"),
+  type: z.literal("PLANT_RECORD"),
   data: PlantRecordDataSchema,
 });
 
@@ -91,7 +91,7 @@ export const plantRecordService = (db: DynamoDBDocumentClient) => {
       const plantRecordDatabase: PlantRecordDatabase = {
         PK: plantRecord.PK,
         SK: plantRecord.SK,
-        type: "plantRecord",
+        type: "PLANT_RECORD",
         GSI: plantRecord.data.plantUuid,
         GSI2: plantRecord.data.date,
         data: {

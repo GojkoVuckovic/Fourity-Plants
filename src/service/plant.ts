@@ -28,11 +28,13 @@ import { z } from "zod";
 
 export const PlantDataSchema = z.object({
   zoneUuid: z.string().uuid().nullable().optional(),
-  plantTypeUuid: z.string().uuid(),
   name: z.string().min(1),
   additionalInfo: z.string().min(1).nullable().optional(),
+  picture: z.string().min(1),
   waterRequirement: z.number().min(1),
   sunRequirement: z.number().min(1),
+  lastTimeWatered: z.string().datetime(),
+  lastTimeSunlit: z.string().datetime(),
 });
 
 export const PlantSchema = BaseItemSchema.extend({
@@ -86,25 +88,6 @@ export const plantService = (db: DynamoDBDocumentClient) => {
     async createPlant(
       req: CreatePlantRequest,
     ): Promise<RequestResult<"createPlant", CreatePlantDTO>> {
-      const getPlantTypeCommand = async () => {
-        const { Item } = await db.send(
-          new GetCommand({
-            TableName: TABLE_NAME,
-            Key: {
-              PK: `PLANT_TYPE#${req.payload.plantTypeUuid}`,
-              SK: req.payload.plantTypeUuid,
-            },
-          }),
-        );
-        return Item;
-      };
-      const getPlantTypeResult = await processRequest(
-        getPlantTypeCommand,
-        req.command,
-      );
-      if (!getPlantTypeResult.success) {
-        return getPlantTypeResult;
-      }
       if (req.payload.zoneUuid) {
         const getZoneCommand = async () => {
           const { Item } = await db.send(
@@ -134,14 +117,16 @@ export const plantService = (db: DynamoDBDocumentClient) => {
         SK: plantUuid,
         type: "PLANT",
         GSI: parserResult.data.zoneUuid || "",
-        GSI2: parserResult.data.plantTypeUuid,
+        GSI2: plantUuid,
         data: {
-          plantTypeUuid: parserResult.data.plantTypeUuid,
           name: parserResult.data.name,
           zoneUuid: parserResult.data.zoneUuid,
           additionalInfo: parserResult.data.additionalInfo,
           waterRequirement: parserResult.data.waterRequirement,
           sunRequirement: parserResult.data.sunRequirement,
+          picture: parserResult.data.picture,
+          lastTimeWatered: parserResult.data.lastTimeWatered,
+          lastTimeSunlit: parserResult.data.lastTimeSunlit,
         },
       };
       const createPlantCommand = async () =>
@@ -185,26 +170,6 @@ export const plantService = (db: DynamoDBDocumentClient) => {
       if (!getPlantResult.success) {
         return getPlantResult;
       }
-
-      const getPlantTypeCommand = async () => {
-        const { Item } = await db.send(
-          new GetCommand({
-            TableName: TABLE_NAME,
-            Key: {
-              PK: `PLANT_TYPE#${req.payload.plantTypeUuid}`,
-              SK: req.payload.plantTypeUuid,
-            },
-          }),
-        );
-        return Item;
-      };
-      const getPlantTypeResult = await processRequest(
-        getPlantTypeCommand,
-        req.command,
-      );
-      if (!getPlantTypeResult.success) {
-        return getPlantTypeResult;
-      }
       const getZoneCommand = async () => {
         const { Item } = await db.send(
           new GetCommand({
@@ -231,14 +196,16 @@ export const plantService = (db: DynamoDBDocumentClient) => {
         SK: parserResult.data.uuid,
         type: "PLANT",
         GSI: parserResult.data.zoneUuid || "",
-        GSI2: parserResult.data.plantTypeUuid,
+        GSI2: parserResult.data.uuid,
         data: {
-          plantTypeUuid: parserResult.data.plantTypeUuid,
           name: parserResult.data.name,
           zoneUuid: parserResult.data.zoneUuid,
           additionalInfo: parserResult.data.additionalInfo,
           waterRequirement: parserResult.data.waterRequirement,
           sunRequirement: parserResult.data.sunRequirement,
+          picture: parserResult.data.picture,
+          lastTimeWatered: parserResult.data.lastTimeWatered,
+          lastTimeSunlit: parserResult.data.lastTimeSunlit,
         },
       };
       const updatePlantCommand = async () =>
