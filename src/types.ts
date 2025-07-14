@@ -1,4 +1,3 @@
-import { PlantType, CreatePlantTypeDto } from "./service/plant_type";
 import { Plant, CreatePlantDTO } from "./service/plant";
 import { CreateZoneDTO, Zone } from "./service/zone";
 
@@ -42,31 +41,6 @@ export type GetPlantRequest = {
 
 export type GetPlantListRequest = {
   command: "getPlantList";
-  payload: ListPayload;
-};
-
-export type CreatePlantTypeRequest = {
-  command: "createPlantType";
-  payload: CreatePlantTypeDto;
-};
-
-export type UpdatePlantTypeRequest = {
-  command: "updatePlantType";
-  payload: PlantType;
-};
-
-export type DeletePlantTypeRequest = {
-  command: "deletePlantType";
-  payload: { uuid: string };
-};
-
-export type GetPlantTypeRequest = {
-  command: "getPlantType";
-  payload: { uuid: string };
-};
-
-export type GetPlantTypeListRequest = {
-  command: "getPlantTypeList";
   payload: ListPayload;
 };
 
@@ -122,39 +96,34 @@ export type GetScoreboardRequest = {
 
 export type GetEmployeeNamesRequest = {
   command: "getEmployeeNames";
-  payload: { employeeNames: string[] };
+  payload: {
+    channel: string;
+  };
 };
 
 export type ListRequests =
   | GetPlantListRequest
   | GetPlantRecordListRequest
-  | GetPlantTypeListRequest
   | GetZoneListRequest;
 
 export type GetRequests =
   | GetEmployeeNamesRequest
   | GetPlantRequest
-  | GetPlantTypeRequest
   | GetZoneRequest
   | GetScheduleRequest
   | GetScoreboardRequest;
 
 export type CreateRequests =
   | CreatePlantRequest
-  | CreatePlantTypeRequest
   | CreateZoneRequest
   | CreateScheduleRequest;
 
 export type PutRequests =
   | UpdatePlantRequest
-  | UpdatePlantTypeRequest
   | UpdateZoneRequest
   | UpdatePlantRecordRequest;
 
-export type DeleteRequests =
-  | DeletePlantRequest
-  | DeletePlantTypeRequest
-  | DeleteZoneRequest;
+export type DeleteRequests = DeletePlantRequest | DeleteZoneRequest;
 
 export type Req =
   | ListRequests

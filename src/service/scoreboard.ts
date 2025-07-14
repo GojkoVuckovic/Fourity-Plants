@@ -21,7 +21,7 @@ export const scoreboardService = (db: DynamoDBDocumentClient) => {
               "#typeAttr": "type",
             },
             ExpressionAttributeValues: {
-              ":typeValue": "plantRecord",
+              ":typeValue": "PLANT_RECORD",
             },
           }),
         );
@@ -41,14 +41,16 @@ export const scoreboardService = (db: DynamoDBDocumentClient) => {
       if (!parseResult.success) {
         return parseResult;
       }
-      const employeeNameCounts = parseResult.data.reduce(
-        (acc: { [key: string]: number }, record: PlantRecord) => {
-          const name = record.employeeName;
-          acc[name] = (acc[name] || 0) + 1;
-          return acc;
-        },
-        {} as { [employee_name: string]: number },
-      );
+      const employeeNameCounts = parseResult.data
+        .filter((record: PlantRecord) => record.resolved === true)
+        .reduce(
+          (acc: { [key: string]: number }, record: PlantRecord) => {
+            const name = record.employeeName;
+            acc[name] = (acc[name] || 0) + 1;
+            return acc;
+          },
+          {} as { [employee_name: string]: number },
+        );
       return createRequestSuccess("getScoreboard")(employeeNameCounts, 200, "");
     },
   };

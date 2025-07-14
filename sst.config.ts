@@ -16,6 +16,9 @@ export default $config({
     };
   },
   async run() {
+    const dotenv = await import("dotenv");
+    dotenv.config();
+    const secret = new sst.Secret("SLACK_BOT_TOKEN");
     // const image = new awsx.ecr.Image("image", {
     // 	repositoryUrl:
     // 		"351931932329.dkr.ecr.eu-central-1.amazonaws.com/fourity/fourity-plants",
@@ -54,19 +57,20 @@ export default $config({
         GSI: "string",
         GSI2: "string",
       },
-      primaryIndex: { hashKey: "PK", rangeKey: "uuid" },
+      primaryIndex: { hashKey: "PK", rangeKey: "SK" },
       globalIndexes: {
-        TypeIndex: { hashKey: "type", rangeKey: "uuid" },
-        GSIndex: { hashKey: "GSI", rangeKey: "uuid" },
+        TypeIndex: { hashKey: "type", rangeKey: "SK" },
+        GSIndex: { hashKey: "GSI", rangeKey: "SK" },
+        GSIndex2: { hashKey: "GSI2", rangeKey: "SK" },
       },
     });
-
     const dispatcher = new sst.aws.Function("Dispatcher", {
       handler: "./src/dispatcher.handler",
-      link: [table],
+      link: [table, secret],
       url: true,
       environment: {
         TABLE_NAME: table.name,
+        CHANNEL_ID: "C0926UCSKPW",
       },
     });
   },
