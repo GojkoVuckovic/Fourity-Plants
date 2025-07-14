@@ -1,36 +1,39 @@
-import { TABLE_NAME, processRequest, parseData } from "./utils";
+import {
+  TABLE_NAME,
+  processRequest,
+  parseData,
+  createSlackMessage,
+} from "./utils";
 import {
   DynamoDBDocumentClient,
   QueryCommand,
   GetCommand,
   PutCommand,
 } from "@aws-sdk/lib-dynamodb";
-import {
-  createRequestFail,
-  createRequestSuccess,
-  RequestResult,
-} from "../requests";
+import { createRequestSuccess, RequestResult } from "../requests";
 import { CreateScheduleRequest, GetScheduleRequest } from "../types";
 import {
   PlantRecordArraySchema,
   PlantRecord,
-  PlantRecordSchema,
-  PlantRecordDtoSchema,
   PlantRecordDatabase,
 } from "./plant_record";
 import { WebClient } from "@slack/web-api";
 import { QueryResult } from "../types";
-import {
-  createQueryCommand,
-  createListResponse,
-  resolvePlantDuty,
-} from "./utils";
+import { createQueryCommand, resolvePlantDuty } from "./utils";
 import { PlantDtoArraySchema } from "./plant";
 import { ZoneDtoSchema } from "./zone";
 import { v4 as uuidv4 } from "uuid";
-import { never } from "zod";
 
 const CHANNEL_ID = process.env.CHANNEL_ID || "";
+
+export type PlantRecordMessage = {
+  date: string;
+  plantName: string;
+  employeeName: string;
+  isWater: boolean;
+  isSun: boolean;
+  additionalInfo?: string | undefined | null;
+};
 
 export const scheduleService = (
   db: DynamoDBDocumentClient,
@@ -60,7 +63,7 @@ export const scheduleService = (
       if (!parseResult.success) return parseResult;
       const plants = parseResult.data;
       const zones = new Map<string, { index: number; employees: string[] }>();
-      const plantRecords: PlantRecordDatabase[] = [];
+      const plantRecords: PlantRecordMessage[] = [];
       for (const plant of plants) {
         const { isWater, isSun } = resolvePlantDuty(
           plant.lastTimeWatered,
@@ -109,6 +112,9 @@ export const scheduleService = (
           employees: zone.employees,
         });
         const plantRecordUuid: string = uuidv4();
+        const now = new Date();
+        now.setUTCHours(0, 0, 0, 0);
+        const isoString = now.toISOString();
         const plantRecord: PlantRecordDatabase = {
           PK: `PLANT_RECORD#${plantRecordUuid}`,
           SK: plantRecordUuid,
@@ -122,7 +128,7 @@ export const scheduleService = (
             employeeName: employee,
             isWater: isWater,
             isSun: isSun,
-            date: new Date().toString(),
+            date: isoString,
           },
         };
         const createPlantRecordCommand = async () =>
@@ -139,13 +145,19 @@ export const scheduleService = (
         if (!createPlantRecordResult.success) {
           return createPlantRecordResult;
         }
-        plantRecords.push(plantRecord);
+        const message: PlantRecordMessage = {
+          date: plantRecord.data.date,
+          plantName: plant.name,
+          employeeName: plantRecord.data.employeeName,
+          isWater: plantRecord.data.isWater,
+          isSun: plantRecord.data.isSun,
+          additionalInfo: plantRecord.data.additionalInfo,
+        };
+        plantRecords.push(message);
       }
+      const postMessageArgs = createSlackMessage(plantRecords, CHANNEL_ID);
       const postScheduleCommand = async () => {
-        return await slack.chat.postMessage({
-          channel: CHANNEL_ID,
-          text: "Here will go the schedule",
-        });
+        return await slack.chat.postMessage(postMessageArgs);
       };
       const postScheduleResult = await processRequest(
         postScheduleCommand,

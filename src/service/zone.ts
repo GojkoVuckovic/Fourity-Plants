@@ -133,21 +133,19 @@ export const ZoneService = (db: DynamoDBDocumentClient) => {
         );
         return Item;
       };
+
       const getZoneResult = await processRequest(getZoneCommand, req.command);
+
       if (!getZoneResult.success) {
         return getZoneResult;
       }
-      const item = req.payload;
-      const parserResult = parseData(item, req.command, ZoneDtoSchema);
-      if (!parserResult.success) {
-        return parserResult;
-      }
+
       const zoneDatabase: ZoneDatabase = {
-        PK: `ZONE#${parserResult.data.uuid}`,
-        SK: parserResult.data.uuid,
+        PK: `ZONE#${req.payload.uuid}`,
+        SK: req.payload.uuid,
         type: "ZONE",
         GSI: req.payload.name,
-        GSI2: "",
+        GSI2: "none",
         data: {
           name: req.payload.name,
           employees: req.payload.employees,

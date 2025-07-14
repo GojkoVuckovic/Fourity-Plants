@@ -70,7 +70,7 @@ export default $config({
       url: true,
       environment: {
         TABLE_NAME: table.name,
-        CHANNEL_ID: process.env.CHANNEL_ID!,
+        CHANNEL_ID: "C0926UCSKPW",
       },
     });
   },

@@ -170,42 +170,41 @@ export const plantService = (db: DynamoDBDocumentClient) => {
       if (!getPlantResult.success) {
         return getPlantResult;
       }
+
       const getZoneCommand = async () => {
         const { Item } = await db.send(
           new GetCommand({
             TableName: TABLE_NAME,
             Key: {
-              PK: `ZONE#${req.payload.zoneUuid}`,
-              SK: req.payload.zoneUuid,
+              PK: `ZONE#${req.payload.uuid}`,
+              SK: req.payload.uuid,
             },
           }),
         );
         return Item;
       };
+
       const getZoneResult = await processRequest(getZoneCommand, req.command);
+
       if (!getZoneResult.success) {
         return getZoneResult;
       }
-      const item = req.payload;
-      const parserResult = parseData(item, req.command, PlantDtoSchema);
-      if (!parserResult.success) {
-        return parserResult;
-      }
+
       const plantDatabase: PlantDatabase = {
-        PK: `PLANT#${parserResult.data.uuid}`,
-        SK: parserResult.data.uuid,
+        PK: `PLANT#${req.payload.uuid}`,
+        SK: req.payload.uuid,
         type: "PLANT",
-        GSI: parserResult.data.zoneUuid || "",
-        GSI2: parserResult.data.uuid,
+        GSI: req.payload.zoneUuid || "",
+        GSI2: req.payload.uuid,
         data: {
-          name: parserResult.data.name,
-          zoneUuid: parserResult.data.zoneUuid,
-          additionalInfo: parserResult.data.additionalInfo,
-          waterRequirement: parserResult.data.waterRequirement,
-          sunRequirement: parserResult.data.sunRequirement,
-          picture: parserResult.data.picture,
-          lastTimeWatered: parserResult.data.lastTimeWatered,
-          lastTimeSunlit: parserResult.data.lastTimeSunlit,
+          name: req.payload.name,
+          zoneUuid: req.payload.zoneUuid,
+          additionalInfo: req.payload.additionalInfo,
+          waterRequirement: req.payload.waterRequirement,
+          sunRequirement: req.payload.sunRequirement,
+          picture: req.payload.picture,
+          lastTimeWatered: req.payload.lastTimeWatered,
+          lastTimeSunlit: req.payload.lastTimeSunlit,
         },
       };
       const updatePlantCommand = async () =>
@@ -223,7 +222,7 @@ export const plantService = (db: DynamoDBDocumentClient) => {
         return updatePlantResult;
       }
       return createRequestSuccess(req.command)(
-        parserResult.data,
+        req.payload,
         updatePlantResult.code,
         updatePlantResult.message,
       );

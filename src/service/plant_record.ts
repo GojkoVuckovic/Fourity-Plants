@@ -19,6 +19,7 @@ import {
   ListResponse,
 } from "../types";
 import { z } from "zod";
+import { PlantSchema, PlantDatabase } from "./plant";
 
 export const PlantRecordDataSchema = z.object({
   plantUuid: z.string().uuid(),
@@ -27,7 +28,7 @@ export const PlantRecordDataSchema = z.object({
   isSun: z.boolean(),
   date: z.string().datetime("Date must be a valid ISO 8601 string"),
   resolved: z.boolean(),
-  additionalInfo: z.string().min(1).nullable().optional(),
+  additionalInfo: z.string().nullable().optional(),
 });
 
 export const PlantRecordSchema = BaseItemSchema.extend({
@@ -56,16 +57,19 @@ export const plantRecordService = (db: DynamoDBDocumentClient) => {
     async updatePlantRecord(
       req: UpdatePlantRecordRequest,
     ): Promise<RequestResult<"updatePlantRecord", PlantRecord>> {
-      const getPlantRecordCommand = async () =>
-        await db.send(
+      const getPlantRecordCommand = async () => {
+        const { Item } = await db.send(
           new GetCommand({
             TableName: TABLE_NAME,
             Key: {
-              PK: `plantRecord#${req.payload.uuid}`,
+              PK: `PLANT_RECORD#${req.payload.uuid}`,
               SK: req.payload.uuid,
             },
           }),
         );
+        return Item;
+      };
+
       const getPlantRecordResult = await processRequest(
         getPlantRecordCommand,
         req.command,
@@ -85,23 +89,20 @@ export const plantRecordService = (db: DynamoDBDocumentClient) => {
       const now = new Date();
       now.setUTCHours(0, 0, 0, 0);
       const isoString = now.toISOString();
-      plantRecord.data.date = isoString;
-      plantRecord.data.resolved = true;
-      plantRecord.data.additionalInfo = req.payload.additionalInfo;
       const plantRecordDatabase: PlantRecordDatabase = {
         PK: plantRecord.PK,
         SK: plantRecord.SK,
         type: "PLANT_RECORD",
         GSI: plantRecord.data.plantUuid,
-        GSI2: plantRecord.data.date,
+        GSI2: plantRecord.SK,
         data: {
-          resolved: plantRecord.data.resolved,
-          additionalInfo: plantRecord.data.additionalInfo,
+          resolved: true,
+          additionalInfo: req.payload.additionalInfo,
           plantUuid: plantRecord.data.plantUuid,
           employeeName: plantRecord.data.employeeName,
           isWater: plantRecord.data.isWater,
           isSun: plantRecord.data.isSun,
-          date: plantRecord.data.date,
+          date: isoString,
         },
       };
       const updatePlantRecordCommand = async () =>
@@ -118,16 +119,77 @@ export const plantRecordService = (db: DynamoDBDocumentClient) => {
       if (!updatePlantRecordResult.success) {
         return updatePlantRecordResult;
       }
+      const getPlantCommand = async () => {
+        const { Item } = await db.send(
+          new GetCommand({
+            TableName: TABLE_NAME,
+            Key: {
+              PK: `PLANT#${plantRecord.data.plantUuid}`,
+              SK: plantRecord.data.plantUuid,
+            },
+          }),
+        );
+        return Item;
+      };
+
+      const getPlantResult = await processRequest(getPlantCommand, req.command);
+
+      if (!getPlantResult.success) {
+        return getPlantResult;
+      }
+
+      const item = getPlantResult.data;
+      const parserResult = parseData(item, req.command, PlantSchema);
+      if (!parserResult.success) {
+        return parserResult;
+      }
+      const plant = parserResult.data;
+      const plantDatabase: PlantDatabase = {
+        PK: plant.PK,
+        SK: plant.SK,
+        type: plant.type,
+        GSI: plant.GSI,
+        GSI2: plant.GSI2,
+        data: {
+          name: plant.data.name,
+          zoneUuid: plant.data.zoneUuid,
+          additionalInfo: plant.data.additionalInfo,
+          waterRequirement: plant.data.waterRequirement,
+          sunRequirement: plant.data.sunRequirement,
+          picture: plant.data.picture,
+          lastTimeWatered: plantRecord.data.isWater
+            ? isoString
+            : plant.data.lastTimeWatered,
+          lastTimeSunlit: plantRecord.data.isSun
+            ? isoString
+            : plant.data.lastTimeSunlit,
+        },
+      };
+
+      const updatePlantCommand = async () =>
+        await db.send(
+          new PutCommand({
+            TableName: TABLE_NAME,
+            Item: plantDatabase,
+          }),
+        );
+      const updatePlantResult = await processRequest(
+        updatePlantCommand,
+        req.command,
+      );
+      if (!updatePlantResult.success) {
+        return updatePlantResult;
+      }
       return createRequestSuccess(req.command)(
         {
-          uuid: plantRecord.SK,
-          resolved: plantRecord.data.resolved,
-          additionalInfo: plantRecord.data.additionalInfo,
-          plantUuid: plantRecord.data.plantUuid,
-          employeeName: plantRecord.data.employeeName,
-          isWater: plantRecord.data.isWater,
-          isSun: plantRecord.data.isSun,
-          date: plantRecord.data.date,
+          uuid: plantRecordDatabase.SK,
+          resolved: plantRecordDatabase.data.resolved,
+          additionalInfo: plantRecordDatabase.data.additionalInfo,
+          plantUuid: plantRecordDatabase.data.plantUuid,
+          employeeName: plantRecordDatabase.data.employeeName,
+          isWater: plantRecordDatabase.data.isWater,
+          isSun: plantRecordDatabase.data.isSun,
+          date: plantRecordDatabase.data.date,
         },
         200,
         "updated successfully",
@@ -140,7 +202,7 @@ export const plantRecordService = (db: DynamoDBDocumentClient) => {
     > {
       const getPlantRecordListCommand = async (): Promise<QueryResult> => {
         const { Items, LastEvaluatedKey } = await db.send(
-          createQueryCommand(req.payload, "PLANT_TYPE"),
+          createQueryCommand(req.payload, "PLANT_RECORD"),
         );
         return { Items, LastEvaluatedKey };
       };
