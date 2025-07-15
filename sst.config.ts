@@ -73,5 +73,15 @@ export default $config({
         CHANNEL_ID: "C0926UCSKPW",
       },
     });
+
+    const slack = new sst.aws.Function("Slack", {
+      handler: "./src/slack.handler",
+      link: [table, secret],
+      url: true,
+      environment: {
+        TABLE_NAME: table.name,
+        CHANNEL_ID: "C0926UCSKPW",
+      },
+    });
   },
 });

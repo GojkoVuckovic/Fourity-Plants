@@ -7,9 +7,11 @@ import * as plant from "./plant";
 import * as schedule from "./schedule";
 import * as scoreboard from "./scoreboard";
 import * as zone from "./zone";
+import * as slack_interact from "./slack_interact";
 import { assertUnreachable, isListRequest, resolveListRequest } from "./utils";
 import { Req } from "../types";
 import { Resource } from "sst";
+import { createRequestFail, createRequestSuccess } from "@src/requests";
 
 const client = new DynamoDBClient({});
 const docClient = DynamoDBDocumentClient.from(client);
@@ -23,6 +25,8 @@ const scheduleServiceInstance = schedule.scheduleService(
 );
 const scoreboardServiceInstance = scoreboard.scoreboardService(docClient);
 const zoneServiceInstance = zone.ZoneService(docClient);
+const slackInteractServiceInstance =
+  slack_interact.slackInteractService(slackClient);
 
 export const ProcessRequest = async (data: Req) => {
   const paginationData = isListRequest(data) ? resolveListRequest(data) : {};
@@ -62,6 +66,20 @@ export const ProcessRequest = async (data: Req) => {
       return scoreboardServiceInstance.getScoreboard(data);
     case "getEmployeeNames":
       return employeeServiceInstance.getEmployeeNames(data);
+    default:
+      return assertUnreachable("Unhandled command")(400, `Unhandled command`);
+  }
+};
+
+export const processSlackRequest = async (payload: any) => {
+  switch (payload.type) {
+    case "block_actions": {
+      return slackInteractServiceInstance.openCompleteTaskModal(payload);
+    }
+    case "view_submission": {
+      return slackInteractServiceInstance.resolveCompleteRequestModal(payload);
+    }
+    //TODO: Add more for slash commands
     default:
       return assertUnreachable("Unhandled command")(400, `Unhandled command`);
   }
