@@ -8,6 +8,7 @@ import {
 import { z } from "zod";
 import { ListPayload, ListRequests, ListResponse, Req } from "@src/types";
 import { PlantRecordMessage } from "./schedule";
+import { callbackify } from "node:util";
 
 export const TABLE_NAME = process.env.TABLE_NAME || "Table";
 
@@ -166,10 +167,10 @@ export const createSlackMessage = (
     plantRecords.forEach((record, index) => {
       let actionsText: string[] = [];
       if (record.isWater) {
-        actionsText.push("💧 Watered");
+        actionsText.push("💧 Water");
       }
       if (record.isSun) {
-        actionsText.push("☀️ Sunlit");
+        actionsText.push("☀️ Move to sun");
       }
       const actionsSummary =
         actionsText.length > 0
@@ -181,6 +182,20 @@ export const createSlackMessage = (
         text: {
           type: "mrkdwn",
           text: `*Plant:* ${record.plantName}\n*Employee:* ${record.employeeName}\n*When:* Today\n*Actions:* ${actionsSummary}`,
+        },
+        accessory: {
+          type: "button",
+          text: {
+            type: "plain_text",
+            text: "📝 Complete",
+            emoji: true,
+          },
+          style: "primary",
+          value: JSON.stringify({
+            uuid: record.uuid,
+            employeeName: record.employeeName,
+          }),
+          action_id: "complete-task",
         },
       };
       blocks.push(recordBlock);
@@ -228,7 +243,8 @@ export const createSlackMessage = (
 
   return {
     channel: channelId,
-    text: "Daily Plant Care Log",
+    text: "Plant task",
     blocks: blocks,
+    callback_id: "plant-task",
   };
 };

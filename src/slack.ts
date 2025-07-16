@@ -1,10 +1,9 @@
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from "aws-lambda";
-import { ProcessRequest } from "./service/index";
+import { ProcessRequest, processSlackRequest } from "./service/index";
 import { successResponse, errorResponse } from "./response";
 import { createRequestFail, createRequestSuccess } from "./requests";
 
 const BodyParseFail = createRequestFail("body_parse");
-
 const ResolveRequest = (
   event: APIGatewayProxyEvent,
 ): [any | null, null | APIGatewayProxyResult] => {
@@ -12,29 +11,31 @@ const ResolveRequest = (
     const fail = BodyParseFail(400, "Request body is required");
     return [null, errorResponse(fail)];
   }
-  let request: any;
   try {
-    const params = new URLSearchParams(event.body);
-    const payloadString = params.get("payload");
-    if (!payloadString) {
-      const fail = BodyParseFail(400, "Payload is required");
-      return [null, errorResponse(fail)];
+    const decodedBody = Buffer.from(event.body, "base64").toString("utf-8");
+    const params = new URLSearchParams(decodedBody);
+    const request = params.get("payload");
+    if (!request) {
+      const fail = BodyParseFail(
+        400,
+        "Missing 'payload' parameter in request body",
+      );
+      return [null, errorResponse(fail, 400)];
     }
-    request = JSON.parse(payloadString);
+    const parsedRequest = JSON.parse(request);
+    return [parsedRequest, null];
   } catch (parseError: any) {
     const fail = BodyParseFail(400, "Invalid JSON in request body");
-    return [null, errorResponse(fail)];
+    return [null, errorResponse(fail, 400)];
   }
-  return [request, null];
 };
-
 export const handler = async (
   event: APIGatewayProxyEvent,
 ): Promise<APIGatewayProxyResult> => {
   try {
     const [request, error] = ResolveRequest(event);
     if (request) {
-      const result = await ProcessRequest(request);
+      const result = await processSlackRequest(request);
       if (result.success) {
         const success = createRequestSuccess("process_request")(
           result.data,
@@ -58,5 +59,5 @@ export const handler = async (
   }
 
   const fail = createRequestFail("process_request")(500, "Unhandled Request");
-  return errorResponse(fail);
+  return errorResponse(fail, 300);
 };

@@ -27,6 +27,7 @@ import { v4 as uuidv4 } from "uuid";
 const CHANNEL_ID = process.env.CHANNEL_ID || "";
 
 export type PlantRecordMessage = {
+  uuid: string;
   date: string;
   plantName: string;
   employeeName: string;
@@ -146,6 +147,7 @@ export const scheduleService = (
           return createPlantRecordResult;
         }
         const message: PlantRecordMessage = {
+          uuid: plantRecord.SK,
           date: plantRecord.data.date,
           plantName: plant.name,
           employeeName: plantRecord.data.employeeName,

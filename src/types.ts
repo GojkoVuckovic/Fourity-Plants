@@ -69,11 +69,6 @@ export type GetZoneListRequest = {
   payload: ListPayload;
 };
 
-export type UpdatePlantRecordRequest = {
-  command: "updatePlantRecord";
-  payload: { uuid: string; additionalInfo?: string };
-};
-
 export type GetPlantRecordListRequest = {
   command: "getPlantRecordList";
   payload: ListPayload;
@@ -118,10 +113,7 @@ export type CreateRequests =
   | CreateZoneRequest
   | CreateScheduleRequest;
 
-export type PutRequests =
-  | UpdatePlantRequest
-  | UpdateZoneRequest
-  | UpdatePlantRecordRequest;
+export type PutRequests = UpdatePlantRequest | UpdateZoneRequest;
 
 export type DeleteRequests = DeletePlantRequest | DeleteZoneRequest;
 

@@ -11,7 +11,6 @@ import * as slack_interact from "./slack_interact";
 import { assertUnreachable, isListRequest, resolveListRequest } from "./utils";
 import { Req } from "../types";
 import { Resource } from "sst";
-import { createRequestFail, createRequestSuccess } from "@src/requests";
 
 const client = new DynamoDBClient({});
 const docClient = DynamoDBDocumentClient.from(client);
@@ -25,8 +24,10 @@ const scheduleServiceInstance = schedule.scheduleService(
 );
 const scoreboardServiceInstance = scoreboard.scoreboardService(docClient);
 const zoneServiceInstance = zone.ZoneService(docClient);
-const slackInteractServiceInstance =
-  slack_interact.slackInteractService(slackClient);
+const slackInteractServiceInstance = slack_interact.slackInteractService(
+  slackClient,
+  plantRecordServiceInstance,
+);
 
 export const ProcessRequest = async (data: Req) => {
   const paginationData = isListRequest(data) ? resolveListRequest(data) : {};
@@ -51,8 +52,6 @@ export const ProcessRequest = async (data: Req) => {
       return zoneServiceInstance.getZone(data);
     case "getZoneList":
       return zoneServiceInstance.getZoneList({ ...data, ...paginationData });
-    case "updatePlantRecord":
-      return plantRecordServiceInstance.updatePlantRecord(data);
     case "getPlantRecordList":
       return plantRecordServiceInstance.getPlantRecordList({
         ...data,
