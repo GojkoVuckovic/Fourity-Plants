@@ -8,7 +8,6 @@ import {
 import { z } from "zod";
 import { ListPayload, ListRequests, ListResponse, Req } from "@src/types";
 import { PlantRecordMessage } from "./schedule";
-import { callbackify } from "node:util";
 
 export const TABLE_NAME = process.env.TABLE_NAME || "Table";
 
@@ -146,7 +145,7 @@ export const resolvePlantDuty = (
 };
 
 export const createSlackMessage = (
-  plantRecords: PlantRecordMessage[],
+  plantRecord: PlantRecordMessage,
   channelId: string,
 ) => {
   const blocks: any[] = [
@@ -163,27 +162,32 @@ export const createSlackMessage = (
     },
   ];
 
-  if (plantRecords && plantRecords.length > 0) {
-    plantRecords.forEach((record, index) => {
-      let actionsText: string[] = [];
-      if (record.isWater) {
-        actionsText.push("💧 Water");
-      }
-      if (record.isSun) {
-        actionsText.push("☀️ Move to sun");
-      }
-      const actionsSummary =
-        actionsText.length > 0
-          ? actionsText.join(" & ")
-          : "No specific action recorded";
+  if (plantRecord) {
+    let actionsText: string[] = [];
+    if (plantRecord.isWater) {
+      actionsText.push("💧 Water");
+    }
+    if (plantRecord.isSun) {
+      actionsText.push("☀️ Move to sun");
+    }
+    const actionsSummary =
+      actionsText.length > 0
+        ? actionsText.join(" & ")
+        : "No specific action recorded";
 
-      const recordBlock = {
-        type: "section",
-        text: {
-          type: "mrkdwn",
-          text: `*Plant:* ${record.plantName}\n*Employee:* ${record.employeeName}\n*When:* Today\n*Actions:* ${actionsSummary}`,
-        },
-        accessory: {
+    const recordBlock = {
+      type: "section",
+      text: {
+        type: "mrkdwn",
+        text: `*Plant:* ${plantRecord.plantName}\n*Employee:* ${plantRecord.employeeName}\n*When:* Today\n*Actions:* ${actionsSummary}`,
+      },
+    };
+    blocks.push(recordBlock);
+
+    const actionsBlock = {
+      type: "actions",
+      elements: [
+        {
           type: "button",
           text: {
             type: "plain_text",
@@ -192,30 +196,40 @@ export const createSlackMessage = (
           },
           style: "primary",
           value: JSON.stringify({
-            uuid: record.uuid,
-            employeeName: record.employeeName,
+            uuid: plantRecord.uuid,
+            employeeName: plantRecord.employeeName,
           }),
           action_id: "complete-task",
         },
-      };
-      blocks.push(recordBlock);
+        {
+          type: "button",
+          text: {
+            type: "plain_text",
+            text: "📝 Delegate to self",
+            emoji: true,
+          },
+          value: JSON.stringify({
+            uuid: plantRecord.uuid,
+            employeeName: plantRecord.employeeName,
+            plantName: plantRecord.plantName,
+          }),
+          action_id: "delegate-task",
+        },
+      ],
+    };
+    blocks.push(actionsBlock);
 
-      if (record.additionalInfo) {
-        blocks.push({
-          type: "context",
-          elements: [
-            {
-              type: "mrkdwn",
-              text: `_Additional Info: ${record.additionalInfo}_`,
-            },
-          ],
-        });
-      }
-
-      if (index < plantRecords.length - 1) {
-        blocks.push({ type: "divider" });
-      }
-    });
+    if (plantRecord.additionalInfo) {
+      blocks.push({
+        type: "context",
+        elements: [
+          {
+            type: "mrkdwn",
+            text: `_Additional Info: ${plantRecord.additionalInfo}_`,
+          },
+        ],
+      });
+    }
   } else {
     blocks.push({
       type: "section",

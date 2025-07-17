@@ -6,17 +6,12 @@ import {
 } from "./utils";
 import {
   DynamoDBDocumentClient,
-  QueryCommand,
   GetCommand,
   PutCommand,
 } from "@aws-sdk/lib-dynamodb";
 import { createRequestSuccess, RequestResult } from "../requests";
-import { CreateScheduleRequest, GetScheduleRequest } from "../types";
-import {
-  PlantRecordArraySchema,
-  PlantRecord,
-  PlantRecordDatabase,
-} from "./plant_record";
+import { CreateScheduleRequest } from "../types";
+import { PlantRecordDatabase } from "./plant_record";
 import { WebClient } from "@slack/web-api";
 import { QueryResult } from "../types";
 import { createQueryCommand, resolvePlantDuty } from "./utils";
@@ -109,7 +104,7 @@ export const scheduleService = (
         const zone = zones.get(plant.zoneUuid)!;
         const employee = zone.employees[zone.index];
         zones.set(plant.zoneUuid, {
-          index: (zone.index + 1) % zones.values.length,
+          index: (zone.index + 1) % zone.employees.length,
           employees: zone.employees,
         });
         const plantRecordUuid: string = uuidv4();
@@ -121,7 +116,7 @@ export const scheduleService = (
           SK: plantRecordUuid,
           type: "PLANT_RECORD",
           GSI: plant.uuid,
-          GSI2: plantRecordUuid,
+          GSI2: false.toString(),
           data: {
             resolved: false,
             additionalInfo: "",
@@ -153,58 +148,30 @@ export const scheduleService = (
           employeeName: plantRecord.data.employeeName,
           isWater: plantRecord.data.isWater,
           isSun: plantRecord.data.isSun,
-          additionalInfo: plantRecord.data.additionalInfo,
+          additionalInfo: plantRecord.data.additionalInfo || "",
         };
         plantRecords.push(message);
       }
-      const postMessageArgs = createSlackMessage(plantRecords, CHANNEL_ID);
-      const postScheduleCommand = async () => {
-        return await slack.chat.postMessage(postMessageArgs);
-      };
-      const postScheduleResult = await processRequest(
-        postScheduleCommand,
-        req.command,
-      );
-      if (!postScheduleResult.success) {
-        return postScheduleResult;
+
+      console.log(plantRecords);
+      for (const plantRecord of plantRecords) {
+        const postMessageArgs = createSlackMessage(plantRecord, CHANNEL_ID);
+        const postScheduleCommand = async () => {
+          return await slack.chat.postMessage(postMessageArgs);
+        };
+        const postScheduleResult = await processRequest(
+          postScheduleCommand,
+          req.command,
+        );
+        if (!postScheduleResult.success) {
+          return postScheduleResult;
+        }
       }
       return createRequestSuccess(req.command)(
         undefined,
         200,
         "successfully created a schedule",
       );
-    },
-    async getSchedule(
-      req: GetScheduleRequest,
-    ): Promise<RequestResult<"getSchedule", PlantRecord[]>> {
-      const getPlantRecordListCommand = async () => {
-        const { Items } = await db.send(
-          new QueryCommand({
-            TableName: TABLE_NAME,
-            IndexName: "TypeIndex",
-            KeyConditionExpression: "#typeAttr = :typeValue",
-            ExpressionAttributeNames: {
-              "#typeAttr": "type",
-            },
-            ExpressionAttributeValues: {
-              ":typeValue": "plantRecord",
-            },
-          }),
-        );
-        return Items;
-      };
-      const getPlantRecordListResult = await processRequest(
-        getPlantRecordListCommand,
-        req.command,
-      );
-      if (!getPlantRecordListResult.success) return getPlantRecordListResult;
-      const parsedData = getPlantRecordListResult.data;
-      const parseResult = parseData(
-        parsedData,
-        req.command,
-        PlantRecordArraySchema,
-      );
-      return parseResult;
     },
   };
 };

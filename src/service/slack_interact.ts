@@ -1,22 +1,21 @@
 import { WebClient } from "@slack/web-api";
 import { createRequestFail, createRequestSuccess } from "@src/requests";
 import { plantRecordService } from "./plant_record";
+import { createSlackMessage, processRequest } from "./utils";
+import { scoreboardService } from "./scoreboard";
 
 export const slackInteractService = (
   slack: WebClient,
   plantRecordServiceInstance: ReturnType<typeof plantRecordService>,
+  scoreboardServiceInstance: ReturnType<typeof scoreboardService>,
 ) => {
   return {
     async openCompleteTaskModal(payload: any) {
-      const action = payload.actions[0];
-      if (!(action.action_id === "complete-task")) {
-        return createRequestFail("slack-action")(200, "unhandled action");
-      }
       const triggerId = payload.trigger_id;
       const originalMessageTs = payload.message?.ts;
       const channelId = payload.channel?.id;
       const userId = payload.user?.id;
-      const buttonData = JSON.parse(action.value);
+      const buttonData = JSON.parse(payload.actions[0].value);
       const taskUuid = buttonData.uuid;
       const assignedEmployeeName = buttonData.employeeName;
       console.log(assignedEmployeeName);
@@ -151,6 +150,73 @@ export const slackInteractService = (
       }
 
       return createRequestSuccess("slack-request")("", 200, "");
+    },
+    async delegateTask(payload: any) {
+      console.log(payload);
+      const originalMessageTs = payload.message?.ts;
+      const channelId = payload.channel?.id;
+      const buttonData = JSON.parse(payload.actions[0].value);
+      const taskUuid = buttonData.uuid;
+      const assignedEmployeeName = buttonData.employeeName;
+      const plantName = buttonData.plantName;
+      console.log(assignedEmployeeName);
+      console.log(payload.user.username);
+      if (assignedEmployeeName === payload.user.username) {
+        try {
+          await slack.chat.postEphemeral({
+            channel: channelId,
+            user: payload.user.id,
+            text: `You are already assigned to this task!`,
+          });
+          return createRequestSuccess("slack-request")("", 200, "");
+        } catch (error) {
+          console.error("Error sending ephemeral message:", error);
+        }
+      }
+      const result = await plantRecordServiceInstance.delegateTask(
+        taskUuid,
+        payload.user.username,
+        plantName,
+      );
+      if (!result.success) {
+        return createRequestFail("slack-request")(400, "Error delegating task");
+      }
+      try {
+        const deleteMessageCommand = async () => {
+          return await slack.chat.delete({
+            channel: channelId,
+            ts: originalMessageTs,
+          });
+        };
+        const deleteMessageResult = await processRequest(
+          deleteMessageCommand,
+          "slack-request",
+        );
+        if (!deleteMessageResult.success) {
+          return deleteMessageResult;
+        }
+
+        const postMessageArgs = createSlackMessage(result.data, channelId);
+        const postMessageCommand = async () => {
+          return await slack.chat.postMessage(postMessageArgs);
+        };
+        const postMessageResult = await processRequest(
+          postMessageCommand,
+          "slack-request",
+        );
+        if (!postMessageResult.success) {
+          return postMessageResult;
+        }
+      } catch (error) {
+        console.error("Error sending ephemeral message:", error);
+      }
+      return createRequestSuccess("slack-request")("", 200, "");
+    },
+    async showScoreboard() {
+      const result = await scoreboardServiceInstance.getScoreboard();
+      if (!result) {
+        return result;
+      }
     },
   };
 };

@@ -1,5 +1,5 @@
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from "aws-lambda";
-import { ProcessRequest, processSlackRequest } from "./service/index";
+import { processSlackRequest } from "./service/index";
 import { successResponse, errorResponse } from "./response";
 import { createRequestFail, createRequestSuccess } from "./requests";
 
@@ -16,11 +16,12 @@ const ResolveRequest = (
     const params = new URLSearchParams(decodedBody);
     const request = params.get("payload");
     if (!request) {
-      const fail = BodyParseFail(
-        400,
-        "Missing 'payload' parameter in request body",
-      );
-      return [null, errorResponse(fail, 400)];
+      const command = params.get("command");
+      if (!command) {
+        const fail = BodyParseFail(400, "Missing payload or command in body");
+        return [null, errorResponse(fail, 400)];
+      }
+      return [command, null];
     }
     const parsedRequest = JSON.parse(request);
     return [parsedRequest, null];

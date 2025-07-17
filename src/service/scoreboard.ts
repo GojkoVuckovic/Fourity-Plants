@@ -1,14 +1,11 @@
 import { TABLE_NAME, processRequest, parseData } from "./utils";
 import { DynamoDBDocumentClient, QueryCommand } from "@aws-sdk/lib-dynamodb";
 import { createRequestSuccess, RequestResult } from "../requests";
-import { GetScoreboardRequest } from "../types";
 import { PlantRecord, PlantRecordArraySchema } from "./plant_record";
 
 export const scoreboardService = (db: DynamoDBDocumentClient) => {
   return {
-    async getScoreboard(
-      req: GetScoreboardRequest,
-    ): Promise<
+    async getScoreboard(): Promise<
       RequestResult<"getScoreboard", { [employee_name: string]: number }>
     > {
       const getPlantRecordListCommand = async () => {
@@ -29,13 +26,13 @@ export const scoreboardService = (db: DynamoDBDocumentClient) => {
       };
       const getPlantRecordListResult = await processRequest(
         getPlantRecordListCommand,
-        req.command,
+        "getScoreboard",
       );
       if (!getPlantRecordListResult.success) return getPlantRecordListResult;
       const parsedData = getPlantRecordListResult.data;
       const parseResult = parseData(
         parsedData,
-        req.command,
+        "getScoreboard",
         PlantRecordArraySchema,
       );
       if (!parseResult.success) {

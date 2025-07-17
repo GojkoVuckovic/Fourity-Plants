@@ -13,7 +13,11 @@ import { Req } from "../types";
 import { Resource } from "sst";
 
 const client = new DynamoDBClient({});
-const docClient = DynamoDBDocumentClient.from(client);
+const docClient = DynamoDBDocumentClient.from(client, {
+  marshallOptions: {
+    removeUndefinedValues: true,
+  },
+});
 const slackClient = new WebClient(Resource.SLACK_BOT_TOKEN.value);
 const plantServiceInstance = plant.plantService(docClient);
 const plantRecordServiceInstance = plant_record.plantRecordService(docClient);
@@ -27,6 +31,7 @@ const zoneServiceInstance = zone.ZoneService(docClient);
 const slackInteractServiceInstance = slack_interact.slackInteractService(
   slackClient,
   plantRecordServiceInstance,
+  scoreboardServiceInstance,
 );
 
 export const ProcessRequest = async (data: Req) => {
@@ -59,10 +64,6 @@ export const ProcessRequest = async (data: Req) => {
       });
     case "createSchedule":
       return scheduleServiceInstance.createSchedule(data);
-    case "getSchedule":
-      return scheduleServiceInstance.getSchedule(data);
-    case "getScoreboard":
-      return scoreboardServiceInstance.getScoreboard(data);
     case "getEmployeeNames":
       return employeeServiceInstance.getEmployeeNames(data);
     default:
@@ -71,15 +72,38 @@ export const ProcessRequest = async (data: Req) => {
 };
 
 export const processSlackRequest = async (payload: any) => {
-  switch (payload.type) {
-    case "block_actions": {
-      return slackInteractServiceInstance.openCompleteTaskModal(payload);
+  //This is for interactions
+  if (payload.type) {
+    switch (payload.type) {
+      case "block_actions": {
+        const action = payload.actions[0];
+        switch (action.action_id) {
+          case "complete-task":
+            return slackInteractServiceInstance.openCompleteTaskModal(payload);
+          case "delegate-task":
+            return slackInteractServiceInstance.delegateTask(payload);
+          default:
+            return assertUnreachable("Unhandled command")(
+              400,
+              `Unhandled command`,
+            );
+        }
+      }
+      case "view_submission": {
+        return slackInteractServiceInstance.resolveCompleteRequestModal(
+          payload,
+        );
+      }
+      default:
+        return assertUnreachable("Unhandled command")(400, `Unhandled command`);
     }
-    case "view_submission": {
-      return slackInteractServiceInstance.resolveCompleteRequestModal(payload);
+    //This is for slash commands
+  } else {
+    switch (payload) {
+      case "/scoreboard":
+        return slackInteractServiceInstance.showScoreboard();
+      default:
+        return assertUnreachable("Unhandled command")(400, `Unhandled command`);
     }
-    //TODO: Add more for slash commands
-    default:
-      return assertUnreachable("Unhandled command")(400, `Unhandled command`);
   }
 };

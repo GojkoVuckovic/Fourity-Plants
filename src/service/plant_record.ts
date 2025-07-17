@@ -19,6 +19,7 @@ import {
 import { GetPlantRecordListRequest, QueryResult, ListResponse } from "../types";
 import { z } from "zod";
 import { PlantSchema, PlantDatabase } from "./plant";
+import { PlantRecordMessage } from "./schedule";
 
 export const PlantRecordDataSchema = z.object({
   plantUuid: z.string().uuid(),
@@ -101,7 +102,7 @@ export const plantRecordService = (db: DynamoDBDocumentClient) => {
         SK: plantRecord.SK,
         type: "PLANT_RECORD",
         GSI: plantRecord.data.plantUuid,
-        GSI2: plantRecord.SK,
+        GSI2: "true",
         data: {
           resolved: true,
           additionalInfo: additionalInfo || "",
@@ -129,7 +130,6 @@ export const plantRecordService = (db: DynamoDBDocumentClient) => {
         return updatePlantRecordResult;
       }
 
-      // Get the plant to update its watering/sunlight timestamps
       const getPlantCommand = async () => {
         const { Item } = await db.send(
           new GetCommand({
@@ -161,8 +161,6 @@ export const plantRecordService = (db: DynamoDBDocumentClient) => {
       }
 
       const plant = plantParse.data;
-
-      // Update plant with new watering/sunlight timestamps
       const plantDatabase: PlantDatabase = {
         PK: plant.PK,
         SK: plant.SK,
@@ -244,6 +242,90 @@ export const plantRecordService = (db: DynamoDBDocumentClient) => {
         getPlantRecordListResult.data.LastEvaluatedKey,
       );
       return createRequestSuccess(req.command)(listResponse, 200, "");
+    },
+    async delegateTask(
+      uuid: string,
+      employeeName: string,
+      plantName: string,
+    ): Promise<RequestResult<"delegateTask", PlantRecordMessage>> {
+      const getPlantRecordCommand = async () => {
+        const { Item } = await db.send(
+          new GetCommand({
+            TableName: TABLE_NAME,
+            Key: {
+              PK: `PLANT_RECORD#${uuid}`,
+              SK: uuid,
+            },
+          }),
+        );
+        return Item;
+      };
+
+      const getPlantRecordResult = await processRequest(
+        getPlantRecordCommand,
+        "delegateTask",
+      );
+      if (!getPlantRecordResult.success) {
+        return getPlantRecordResult;
+      }
+
+      const plantRecordParse = parseData(
+        getPlantRecordResult.data,
+        "delegateTask",
+        PlantRecordSchema,
+      );
+      if (!plantRecordParse.success) {
+        return plantRecordParse;
+      }
+
+      const plantRecord = plantRecordParse.data;
+
+      const plantRecordDatabase: PlantRecordDatabase = {
+        PK: plantRecord.PK,
+        SK: plantRecord.SK,
+        type: "PLANT_RECORD",
+        GSI: plantRecord.data.plantUuid,
+        GSI2: plantRecord.data.resolved.toString(),
+        data: {
+          resolved: plantRecord.data.resolved,
+          additionalInfo: plantRecord.data.additionalInfo,
+          plantUuid: plantRecord.data.plantUuid,
+          employeeName: employeeName,
+          isWater: plantRecord.data.isWater,
+          isSun: plantRecord.data.isSun,
+          date: plantRecord.data.date,
+        },
+      };
+
+      const updatePlantRecordCommand = async () =>
+        await db.send(
+          new PutCommand({
+            TableName: TABLE_NAME,
+            Item: plantRecordDatabase,
+          }),
+        );
+
+      const updatePlantRecordResult = await processRequest(
+        updatePlantRecordCommand,
+        "delegateTask",
+      );
+      if (!updatePlantRecordResult.success) {
+        return updatePlantRecordResult;
+      }
+      const message: PlantRecordMessage = {
+        uuid: plantRecord.SK,
+        date: plantRecord.data.date,
+        plantName: plantName,
+        employeeName: employeeName,
+        isWater: plantRecord.data.isWater,
+        isSun: plantRecord.data.isSun,
+        additionalInfo: plantRecord.data.additionalInfo,
+      };
+      return createRequestSuccess("delegateTask")(
+        message,
+        200,
+        "Delegated successfully",
+      );
     },
   };
 };
