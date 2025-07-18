@@ -1,8 +1,14 @@
 import { WebClient } from "@slack/web-api";
 import { createRequestFail, createRequestSuccess } from "@src/requests";
 import { plantRecordService } from "./plant_record";
-import { createSlackMessage, processRequest } from "./utils";
+import {
+  createScoreboardMessage,
+  createSlackMessage,
+  processRequest,
+} from "./utils";
 import { scoreboardService } from "./scoreboard";
+
+const CHANNEL_ID = process.env.CHANNEL_ID || "";
 
 export const slackInteractService = (
   slack: WebClient,
@@ -214,9 +220,18 @@ export const slackInteractService = (
     },
     async showScoreboard() {
       const result = await scoreboardServiceInstance.getScoreboard();
-      if (!result) {
+      if (!result.success) {
         return result;
       }
+      const postMessageArgs = createScoreboardMessage(result.data, CHANNEL_ID);
+      const postMessageCommand = async () => {
+        return await slack.chat.postMessage(postMessageArgs);
+      };
+      const postMessageResult = await processRequest(
+        postMessageCommand,
+        "slack-request",
+      );
+      return postMessageResult;
     },
   };
 };

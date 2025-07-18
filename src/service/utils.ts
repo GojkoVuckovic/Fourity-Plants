@@ -262,3 +262,46 @@ export const createSlackMessage = (
     callback_id: "plant-task",
   };
 };
+
+export const createScoreboardMessage = (
+  scoreboard: {
+    [employeeName: string]: number;
+  },
+  channelId: string,
+) => {
+  let message: string = "*🏆 Scoreboard 🏆*\n\n";
+  const sortedEmployees: Array<{ name: string; score: number }> =
+    Object.entries(scoreboard)
+      .map(([name, score]) => ({ name, score }))
+      .sort((a, b) => b.score - a.score);
+  sortedEmployees.forEach((employee, index) => {
+    let emoji: string = "";
+    switch (index) {
+      case 0:
+        emoji = ":first_place_medal:";
+        break;
+      case 1:
+        emoji = ":second_place_medal:";
+        break;
+      case 2:
+        emoji = ":third_place_medal:";
+        break;
+      case 3:
+        emoji = ":four:";
+        break;
+      case 4:
+        emoji = ":five:";
+        break;
+      default:
+        emoji = `:${index + 1}:`;
+        break;
+    }
+    message += `${emoji} *${employee.name}*: ${employee.score} points\n`;
+  });
+
+  return {
+    channel: channelId,
+    text: message,
+    callback_id: "scoreboard",
+  };
+};

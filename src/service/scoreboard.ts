@@ -3,6 +3,10 @@ import { DynamoDBDocumentClient, QueryCommand } from "@aws-sdk/lib-dynamodb";
 import { createRequestSuccess, RequestResult } from "../requests";
 import { PlantRecord, PlantRecordArraySchema } from "./plant_record";
 
+const thirtyDaysAgo = new Date();
+thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+thirtyDaysAgo.setHours(0, 0, 0, 0);
+
 export const scoreboardService = (db: DynamoDBDocumentClient) => {
   return {
     async getScoreboard(): Promise<
@@ -39,7 +43,10 @@ export const scoreboardService = (db: DynamoDBDocumentClient) => {
         return parseResult;
       }
       const employeeNameCounts = parseResult.data
-        .filter((record: PlantRecord) => record.resolved === true)
+        .filter((record: PlantRecord) => {
+          const recordDate = new Date(record.date);
+          return record.resolved === true && recordDate >= thirtyDaysAgo;
+        })
         .reduce(
           (acc: { [key: string]: number }, record: PlantRecord) => {
             const name = record.employeeName;

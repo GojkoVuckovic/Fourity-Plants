@@ -2,6 +2,37 @@ import { APIGatewayProxyEvent, APIGatewayProxyResult } from "aws-lambda";
 import { processSlackRequest } from "./service/index";
 import { successResponse, errorResponse } from "./response";
 import { createRequestFail, createRequestSuccess } from "./requests";
+import { Resource } from "sst";
+import * as crypto from "crypto";
+
+const verifyRequest = (event: APIGatewayProxyEvent): boolean => {
+  const signingSecret = Resource.SLACK_SIGNING_SECRET.value;
+  console.log(signingSecret);
+  if (!event.body) {
+    return false;
+  }
+  const decodedBody = Buffer.from(event["body"], "base64").toString("utf-8");
+  const headers = makeLower(event.headers);
+  const timestamp = headers["x-slack-request-timestamp"];
+  const signature = headers["x-slack-signature"];
+  const baseString = "v0:" + timestamp + ":" + decodedBody;
+  const hmac = crypto
+    .createHmac("sha256", signingSecret)
+    .update(baseString)
+    .digest("hex");
+  const computedSlackSignature = "v0=" + hmac;
+  return computedSlackSignature === signature;
+};
+
+const makeLower = (headers: any) => {
+  let lowerHeaders = {};
+  for (const key in headers) {
+    if (headers.hasOwnProperty(key)) {
+      lowerHeaders[key.toLowerCase()] = headers[key].toLowerCase();
+    }
+  }
+  return lowerHeaders;
+};
 
 const BodyParseFail = createRequestFail("body_parse");
 const ResolveRequest = (
@@ -34,6 +65,13 @@ export const handler = async (
   event: APIGatewayProxyEvent,
 ): Promise<APIGatewayProxyResult> => {
   try {
+    if (!verifyRequest(event)) {
+      const fail = createRequestFail("verify_request")(
+        401,
+        "Request verification failed",
+      );
+      return errorResponse(fail);
+    }
     const [request, error] = ResolveRequest(event);
     if (request) {
       const result = await processSlackRequest(request);
