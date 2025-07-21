@@ -19,6 +19,7 @@ export default $config({
     const dotenv = await import("dotenv");
     dotenv.config();
     const secret = new sst.Secret("SLACK_BOT_TOKEN");
+    const signingSecret = new sst.Secret("SLACK_SIGNING_SECRET");
     // const image = new awsx.ecr.Image("image", {
     // 	repositoryUrl:
     // 		"351931932329.dkr.ecr.eu-central-1.amazonaws.com/fourity/fourity-plants",
@@ -67,6 +68,16 @@ export default $config({
     const dispatcher = new sst.aws.Function("Dispatcher", {
       handler: "./src/dispatcher.handler",
       link: [table, secret],
+      url: true,
+      environment: {
+        TABLE_NAME: table.name,
+        CHANNEL_ID: "C0926UCSKPW",
+      },
+    });
+
+    const slack = new sst.aws.Function("Slack", {
+      handler: "./src/slack.handler",
+      link: [table, secret, signingSecret],
       url: true,
       environment: {
         TABLE_NAME: table.name,

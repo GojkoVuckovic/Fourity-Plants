@@ -7,12 +7,17 @@ import * as plant from "./plant";
 import * as schedule from "./schedule";
 import * as scoreboard from "./scoreboard";
 import * as zone from "./zone";
+import * as slack_interact from "./slack_interact";
 import { assertUnreachable, isListRequest, resolveListRequest } from "./utils";
-import { Req } from "../types";
+import { Req, SlackRequest } from "../types";
 import { Resource } from "sst";
 
 const client = new DynamoDBClient({});
-const docClient = DynamoDBDocumentClient.from(client);
+const docClient = DynamoDBDocumentClient.from(client, {
+  marshallOptions: {
+    removeUndefinedValues: true,
+  },
+});
 const slackClient = new WebClient(Resource.SLACK_BOT_TOKEN.value);
 const plantServiceInstance = plant.plantService(docClient);
 const plantRecordServiceInstance = plant_record.plantRecordService(docClient);
@@ -23,6 +28,11 @@ const scheduleServiceInstance = schedule.scheduleService(
 );
 const scoreboardServiceInstance = scoreboard.scoreboardService(docClient);
 const zoneServiceInstance = zone.ZoneService(docClient);
+const slackInteractServiceInstance = slack_interact.slackInteractService(
+  slackClient,
+  plantRecordServiceInstance,
+  scoreboardServiceInstance,
+);
 
 export const ProcessRequest = async (data: Req) => {
   const paginationData = isListRequest(data) ? resolveListRequest(data) : {};
@@ -47,8 +57,6 @@ export const ProcessRequest = async (data: Req) => {
       return zoneServiceInstance.getZone(data);
     case "getZoneList":
       return zoneServiceInstance.getZoneList({ ...data, ...paginationData });
-    case "updatePlantRecord":
-      return plantRecordServiceInstance.updatePlantRecord(data);
     case "getPlantRecordList":
       return plantRecordServiceInstance.getPlantRecordList({
         ...data,
@@ -56,12 +64,25 @@ export const ProcessRequest = async (data: Req) => {
       });
     case "createSchedule":
       return scheduleServiceInstance.createSchedule(data);
-    case "getSchedule":
-      return scheduleServiceInstance.getSchedule(data);
-    case "getScoreboard":
-      return scoreboardServiceInstance.getScoreboard(data);
     case "getEmployeeNames":
       return employeeServiceInstance.getEmployeeNames(data);
+    default:
+      return assertUnreachable("Unhandled command")(400, `Unhandled command`);
+  }
+};
+
+export const processSlackRequest = async (payload: SlackRequest) => {
+  switch (payload.command) {
+    case "complete-task": {
+      console.log(payload);
+      return slackInteractServiceInstance.openCompleteTaskModal(payload);
+    }
+    case "delegate-task":
+      return slackInteractServiceInstance.delegateTask(payload);
+    case "complete-task-modal":
+      return slackInteractServiceInstance.resolveCompleteRequestModal(payload);
+    case "/scoreboard":
+      return slackInteractServiceInstance.showScoreboard();
     default:
       return assertUnreachable("Unhandled command")(400, `Unhandled command`);
   }

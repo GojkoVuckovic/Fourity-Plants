@@ -6,8 +6,23 @@ import {
   RequestResult,
 } from "../requests";
 import { z } from "zod";
-import { ListPayload, ListRequests, ListResponse, Req } from "@src/types";
+import {
+  DelegateTaskRequest,
+  ListPayload,
+  ListRequests,
+  ListResponse,
+  OpenCompleteRequestModalRequest,
+  Req,
+  ResolveCompleteRequestModalRequest,
+  ShowScoreboardRequest,
+  SlackRequest,
+} from "@src/types";
 import { PlantRecordMessage } from "./schedule";
+import {
+  delegateTaskPayloadSchema,
+  openCompleteTaskModalPayloadSchema,
+  resolveCompleteRequestModalPayloadSchema,
+} from "./slack_interact";
 
 export const TABLE_NAME = process.env.TABLE_NAME || "Table";
 
@@ -145,7 +160,7 @@ export const resolvePlantDuty = (
 };
 
 export const createSlackMessage = (
-  plantRecords: PlantRecordMessage[],
+  plantRecord: PlantRecordMessage,
   channelId: string,
 ) => {
   const blocks: any[] = [
@@ -162,45 +177,74 @@ export const createSlackMessage = (
     },
   ];
 
-  if (plantRecords && plantRecords.length > 0) {
-    plantRecords.forEach((record, index) => {
-      let actionsText: string[] = [];
-      if (record.isWater) {
-        actionsText.push("💧 Watered");
-      }
-      if (record.isSun) {
-        actionsText.push("☀️ Sunlit");
-      }
-      const actionsSummary =
-        actionsText.length > 0
-          ? actionsText.join(" & ")
-          : "No specific action recorded";
+  if (plantRecord) {
+    let actionsText: string[] = [];
+    if (plantRecord.isWater) {
+      actionsText.push("💧 Water");
+    }
+    if (plantRecord.isSun) {
+      actionsText.push("☀️ Move to sun");
+    }
+    const actionsSummary =
+      actionsText.length > 0
+        ? actionsText.join(" & ")
+        : "No specific action recorded";
 
-      const recordBlock = {
-        type: "section",
-        text: {
-          type: "mrkdwn",
-          text: `*Plant:* ${record.plantName}\n*Employee:* ${record.employeeName}\n*When:* Today\n*Actions:* ${actionsSummary}`,
+    const recordBlock = {
+      type: "section",
+      text: {
+        type: "mrkdwn",
+        text: `*Plant:* ${plantRecord.plantName}\n*Employee:* ${plantRecord.employeeName}\n*When:* Today\n*Actions:* ${actionsSummary}`,
+      },
+    };
+    blocks.push(recordBlock);
+
+    const actionsBlock = {
+      type: "actions",
+      elements: [
+        {
+          type: "button",
+          text: {
+            type: "plain_text",
+            text: "📝 Complete",
+            emoji: true,
+          },
+          style: "primary",
+          value: JSON.stringify({
+            uuid: plantRecord.uuid,
+            employeeName: plantRecord.employeeName,
+          }),
+          action_id: "complete-task",
         },
-      };
-      blocks.push(recordBlock);
+        {
+          type: "button",
+          text: {
+            type: "plain_text",
+            text: "📝 Delegate to self",
+            emoji: true,
+          },
+          value: JSON.stringify({
+            uuid: plantRecord.uuid,
+            employeeName: plantRecord.employeeName,
+            plantName: plantRecord.plantName,
+          }),
+          action_id: "delegate-task",
+        },
+      ],
+    };
+    blocks.push(actionsBlock);
 
-      if (record.additionalInfo) {
-        blocks.push({
-          type: "context",
-          elements: [
-            {
-              type: "mrkdwn",
-              text: `_Additional Info: ${record.additionalInfo}_`,
-            },
-          ],
-        });
-      }
-
-      if (index < plantRecords.length - 1) {
-        blocks.push({ type: "divider" });
-      }
-    });
+    if (plantRecord.additionalInfo) {
+      blocks.push({
+        type: "context",
+        elements: [
+          {
+            type: "mrkdwn",
+            text: `_Additional Info: ${plantRecord.additionalInfo}_`,
+          },
+        ],
+      });
+    }
   } else {
     blocks.push({
       type: "section",
@@ -228,7 +272,106 @@ export const createSlackMessage = (
 
   return {
     channel: channelId,
-    text: "Daily Plant Care Log",
+    text: "Plant task",
     blocks: blocks,
+    callback_id: "plant-task",
   };
+};
+
+export const createScoreboardMessage = (
+  scoreboard: {
+    [employeeName: string]: number;
+  },
+  channelId: string,
+) => {
+  let message: string = "*🏆 Scoreboard 🏆*\n\n";
+  const sortedEmployees: Array<{ name: string; score: number }> =
+    Object.entries(scoreboard)
+      .map(([name, score]) => ({ name, score }))
+      .sort((a, b) => b.score - a.score);
+  sortedEmployees.forEach((employee, index) => {
+    let emoji: string = "";
+    switch (index) {
+      case 0:
+        emoji = ":first_place_medal:";
+        break;
+      case 1:
+        emoji = ":second_place_medal:";
+        break;
+      case 2:
+        emoji = ":third_place_medal:";
+        break;
+      case 3:
+        emoji = ":four:";
+        break;
+      case 4:
+        emoji = ":five:";
+        break;
+      default:
+        emoji = `:${index + 1}:`;
+        break;
+    }
+    message += `${emoji} *${employee.name}*: ${employee.score} points\n`;
+  });
+
+  return {
+    channel: channelId,
+    text: message,
+    callback_id: "scoreboard",
+  };
+};
+
+export const parseSlackRequest = (
+  payload: any,
+): RequestResult<"parseSlackRequest", SlackRequest> => {
+  if (payload == "/scoreboard") {
+    const req: ShowScoreboardRequest = { command: "/scoreboard" };
+    return createRequestSuccess("parseSlackRequest")(req, 200, "");
+  }
+  if (payload.actions && payload.actions[0].action_id == "complete-task") {
+    const data = parseData(
+      payload,
+      "parseSlackRequest",
+      openCompleteTaskModalPayloadSchema,
+    );
+    if (!data.success) {
+      return createRequestFail("parseSlackRequest")(500, "failed to parse");
+    }
+    const req: OpenCompleteRequestModalRequest = {
+      command: "complete-task",
+      payload: data.data,
+    };
+    return createRequestSuccess("parseSlackRequest")(req, 200, "");
+  }
+  if (payload.actions && payload.actions[0].action_id == "delegate-task") {
+    const data = parseData(
+      payload,
+      "parseSlackRequest",
+      delegateTaskPayloadSchema,
+    );
+    if (!data.success) {
+      return createRequestFail("parseSlackRequest")(500, "failed to parse");
+    }
+    const req: DelegateTaskRequest = {
+      command: "delegate-task",
+      payload: data.data,
+    };
+    return createRequestSuccess("parseSlackRequest")(req, 200, "");
+  }
+  if (payload.view.callback_id == "complete-task-modal") {
+    const data = parseData(
+      payload,
+      "parseSlackRequest",
+      resolveCompleteRequestModalPayloadSchema,
+    );
+    if (!data.success) {
+      return createRequestFail("parseSlackRequest")(500, "failed to parse");
+    }
+    const req: ResolveCompleteRequestModalRequest = {
+      command: "complete-task-modal",
+      payload: data.data,
+    };
+    return createRequestSuccess("parseSlackRequest")(req, 200, "");
+  }
+  return createRequestFail("parseSlackRequest")(400, "invalid payload");
 };

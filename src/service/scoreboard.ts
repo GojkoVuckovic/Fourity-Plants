@@ -1,15 +1,16 @@
 import { TABLE_NAME, processRequest, parseData } from "./utils";
 import { DynamoDBDocumentClient, QueryCommand } from "@aws-sdk/lib-dynamodb";
 import { createRequestSuccess, RequestResult } from "../requests";
-import { GetScoreboardRequest } from "../types";
 import { PlantRecord, PlantRecordArraySchema } from "./plant_record";
+
+const thirtyDaysAgo = new Date();
+thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+thirtyDaysAgo.setHours(0, 0, 0, 0);
 
 export const scoreboardService = (db: DynamoDBDocumentClient) => {
   return {
-    async getScoreboard(
-      req: GetScoreboardRequest,
-    ): Promise<
-      RequestResult<"getScoreboard", { [employee_name: string]: number }>
+    async getScoreboard(): Promise<
+      RequestResult<"slack-request", { [employee_name: string]: number }>
     > {
       const getPlantRecordListCommand = async () => {
         const { Items } = await db.send(
@@ -29,20 +30,23 @@ export const scoreboardService = (db: DynamoDBDocumentClient) => {
       };
       const getPlantRecordListResult = await processRequest(
         getPlantRecordListCommand,
-        req.command,
+        "slack-request",
       );
       if (!getPlantRecordListResult.success) return getPlantRecordListResult;
       const parsedData = getPlantRecordListResult.data;
       const parseResult = parseData(
         parsedData,
-        req.command,
+        "slack-request",
         PlantRecordArraySchema,
       );
       if (!parseResult.success) {
         return parseResult;
       }
       const employeeNameCounts = parseResult.data
-        .filter((record: PlantRecord) => record.resolved === true)
+        .filter((record: PlantRecord) => {
+          const recordDate = new Date(record.date);
+          return record.resolved === true && recordDate >= thirtyDaysAgo;
+        })
         .reduce(
           (acc: { [key: string]: number }, record: PlantRecord) => {
             const name = record.employeeName;
@@ -51,7 +55,7 @@ export const scoreboardService = (db: DynamoDBDocumentClient) => {
           },
           {} as { [employee_name: string]: number },
         );
-      return createRequestSuccess("getScoreboard")(employeeNameCounts, 200, "");
+      return createRequestSuccess("slack-request")(employeeNameCounts, 200, "");
     },
   };
 };

@@ -11,15 +11,15 @@ import {
   PutCommand,
   DynamoDBDocumentClient,
 } from "@aws-sdk/lib-dynamodb";
-import { createRequestSuccess, RequestResult } from "../requests";
 import {
-  UpdatePlantRecordRequest,
-  GetPlantRecordListRequest,
-  QueryResult,
-  ListResponse,
-} from "../types";
+  createRequestFail,
+  createRequestSuccess,
+  RequestResult,
+} from "../requests";
+import { GetPlantRecordListRequest, QueryResult, ListResponse } from "../types";
 import { z } from "zod";
 import { PlantSchema, PlantDatabase } from "./plant";
+import { PlantRecordMessage } from "./schedule";
 
 export const PlantRecordDataSchema = z.object({
   plantUuid: z.string().uuid(),
@@ -54,16 +54,17 @@ export type PlantRecord = z.infer<typeof PlantRecordDtoSchema>;
 
 export const plantRecordService = (db: DynamoDBDocumentClient) => {
   return {
-    async updatePlantRecord(
-      req: UpdatePlantRecordRequest,
-    ): Promise<RequestResult<"updatePlantRecord", PlantRecord>> {
+    async completeTask(
+      uuid: string,
+      additionalInfo?: string,
+    ): Promise<RequestResult<"slack-request", PlantRecord>> {
       const getPlantRecordCommand = async () => {
         const { Item } = await db.send(
           new GetCommand({
             TableName: TABLE_NAME,
             Key: {
-              PK: `PLANT_RECORD#${req.payload.uuid}`,
-              SK: req.payload.uuid,
+              PK: `PLANT_RECORD#${uuid}`,
+              SK: uuid,
             },
           }),
         );
@@ -72,32 +73,42 @@ export const plantRecordService = (db: DynamoDBDocumentClient) => {
 
       const getPlantRecordResult = await processRequest(
         getPlantRecordCommand,
-        req.command,
+        "slack-request",
       );
       if (!getPlantRecordResult.success) {
         return getPlantRecordResult;
       }
+
       const plantRecordParse = parseData(
         getPlantRecordResult.data,
-        req.command,
+        "slack-request",
         PlantRecordSchema,
       );
       if (!plantRecordParse.success) {
         return plantRecordParse;
       }
+
       const plantRecord = plantRecordParse.data;
+
+      if (plantRecord.data.resolved) {
+        return createRequestFail("slack-request")(
+          200,
+          "task_already_completed",
+        );
+      }
       const now = new Date();
       now.setUTCHours(0, 0, 0, 0);
       const isoString = now.toISOString();
+
       const plantRecordDatabase: PlantRecordDatabase = {
         PK: plantRecord.PK,
         SK: plantRecord.SK,
         type: "PLANT_RECORD",
         GSI: plantRecord.data.plantUuid,
-        GSI2: plantRecord.SK,
+        GSI2: "true",
         data: {
           resolved: true,
-          additionalInfo: req.payload.additionalInfo,
+          additionalInfo: additionalInfo || "",
           plantUuid: plantRecord.data.plantUuid,
           employeeName: plantRecord.data.employeeName,
           isWater: plantRecord.data.isWater,
@@ -105,6 +116,7 @@ export const plantRecordService = (db: DynamoDBDocumentClient) => {
           date: isoString,
         },
       };
+
       const updatePlantRecordCommand = async () =>
         await db.send(
           new PutCommand({
@@ -112,13 +124,15 @@ export const plantRecordService = (db: DynamoDBDocumentClient) => {
             Item: plantRecordDatabase,
           }),
         );
+
       const updatePlantRecordResult = await processRequest(
         updatePlantRecordCommand,
-        req.command,
+        "slack-request",
       );
       if (!updatePlantRecordResult.success) {
         return updatePlantRecordResult;
       }
+
       const getPlantCommand = async () => {
         const { Item } = await db.send(
           new GetCommand({
@@ -132,18 +146,24 @@ export const plantRecordService = (db: DynamoDBDocumentClient) => {
         return Item;
       };
 
-      const getPlantResult = await processRequest(getPlantCommand, req.command);
-
+      const getPlantResult = await processRequest(
+        getPlantCommand,
+        "slack-request",
+      );
       if (!getPlantResult.success) {
         return getPlantResult;
       }
 
-      const item = getPlantResult.data;
-      const parserResult = parseData(item, req.command, PlantSchema);
-      if (!parserResult.success) {
-        return parserResult;
+      const plantParse = parseData(
+        getPlantResult.data,
+        "slack-request",
+        PlantSchema,
+      );
+      if (!plantParse.success) {
+        return plantParse;
       }
-      const plant = parserResult.data;
+
+      const plant = plantParse.data;
       const plantDatabase: PlantDatabase = {
         PK: plant.PK,
         SK: plant.SK,
@@ -173,14 +193,16 @@ export const plantRecordService = (db: DynamoDBDocumentClient) => {
             Item: plantDatabase,
           }),
         );
+
       const updatePlantResult = await processRequest(
         updatePlantCommand,
-        req.command,
+        "slack-request",
       );
       if (!updatePlantResult.success) {
         return updatePlantResult;
       }
-      return createRequestSuccess(req.command)(
+
+      return createRequestSuccess("slack-request")(
         {
           uuid: plantRecordDatabase.SK,
           resolved: plantRecordDatabase.data.resolved,
@@ -192,7 +214,7 @@ export const plantRecordService = (db: DynamoDBDocumentClient) => {
           date: plantRecordDatabase.data.date,
         },
         200,
-        "updated successfully",
+        "Task completed successfully",
       );
     },
     async getPlantRecordList(
@@ -223,6 +245,90 @@ export const plantRecordService = (db: DynamoDBDocumentClient) => {
         getPlantRecordListResult.data.LastEvaluatedKey,
       );
       return createRequestSuccess(req.command)(listResponse, 200, "");
+    },
+    async delegateTask(
+      uuid: string,
+      employeeName: string,
+      plantName: string,
+    ): Promise<RequestResult<"delegateTask", PlantRecordMessage>> {
+      const getPlantRecordCommand = async () => {
+        const { Item } = await db.send(
+          new GetCommand({
+            TableName: TABLE_NAME,
+            Key: {
+              PK: `PLANT_RECORD#${uuid}`,
+              SK: uuid,
+            },
+          }),
+        );
+        return Item;
+      };
+
+      const getPlantRecordResult = await processRequest(
+        getPlantRecordCommand,
+        "delegateTask",
+      );
+      if (!getPlantRecordResult.success) {
+        return getPlantRecordResult;
+      }
+
+      const plantRecordParse = parseData(
+        getPlantRecordResult.data,
+        "delegateTask",
+        PlantRecordSchema,
+      );
+      if (!plantRecordParse.success) {
+        return plantRecordParse;
+      }
+
+      const plantRecord = plantRecordParse.data;
+
+      const plantRecordDatabase: PlantRecordDatabase = {
+        PK: plantRecord.PK,
+        SK: plantRecord.SK,
+        type: "PLANT_RECORD",
+        GSI: plantRecord.data.plantUuid,
+        GSI2: plantRecord.data.resolved.toString(),
+        data: {
+          resolved: plantRecord.data.resolved,
+          additionalInfo: plantRecord.data.additionalInfo,
+          plantUuid: plantRecord.data.plantUuid,
+          employeeName: employeeName,
+          isWater: plantRecord.data.isWater,
+          isSun: plantRecord.data.isSun,
+          date: plantRecord.data.date,
+        },
+      };
+
+      const updatePlantRecordCommand = async () =>
+        await db.send(
+          new PutCommand({
+            TableName: TABLE_NAME,
+            Item: plantRecordDatabase,
+          }),
+        );
+
+      const updatePlantRecordResult = await processRequest(
+        updatePlantRecordCommand,
+        "delegateTask",
+      );
+      if (!updatePlantRecordResult.success) {
+        return updatePlantRecordResult;
+      }
+      const message: PlantRecordMessage = {
+        uuid: plantRecord.SK,
+        date: plantRecord.data.date,
+        plantName: plantName,
+        employeeName: employeeName,
+        isWater: plantRecord.data.isWater,
+        isSun: plantRecord.data.isSun,
+        additionalInfo: plantRecord.data.additionalInfo,
+      };
+      return createRequestSuccess("delegateTask")(
+        message,
+        200,
+        "Delegated successfully",
+      );
     },
   };
 };
