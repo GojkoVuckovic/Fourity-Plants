@@ -16,7 +16,6 @@ import {
   DelegateTaskRequest,
   OpenCompleteRequestModalRequest,
   ResolveCompleteRequestModalRequest,
-  SlackRequest,
 } from "@src/types";
 
 const CHANNEL_ID = process.env.CHANNEL_ID || "";
@@ -150,7 +149,6 @@ export const slackInteractService = (
       const buttonData = payload.payload.actions[0].value;
       const taskUuid = buttonData.uuid;
       const assignedEmployeeName = buttonData.employeeName;
-      console.log(assignedEmployeeName);
       if (assignedEmployeeName != payload.payload.user.username) {
         try {
           await slack.chat.postEphemeral({
@@ -230,7 +228,6 @@ export const slackInteractService = (
             },
           },
         });
-        console.log("Modal opened successfully.");
       } catch (modalError) {
         console.error("Error opening modal:", modalError);
       }
@@ -239,21 +236,17 @@ export const slackInteractService = (
     async resolveCompleteRequestModal(
       payload: ResolveCompleteRequestModalRequest,
     ): Promise<RequestResult<"slack-request", string>> {
-      const additionalInfo =
+      let additionalInfo =
         payload.payload.view.state.values["additional-info-block"][
           "additional-info-input"
-        ].value;
+        ].value ?? "";
       const privateMetadata = payload.payload.view.private_metadata;
       const taskUuid = privateMetadata.task_uuid;
-
-      console.log("Completing task:", taskUuid);
-      console.log("Additional info:", additionalInfo);
 
       const result = await plantRecordServiceInstance.completeTask(
         taskUuid,
         additionalInfo,
       );
-      console.log(result.message);
       if (!result.success) {
         if (result.message === "task_already_completed") {
           try {

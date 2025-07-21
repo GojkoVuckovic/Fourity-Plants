@@ -324,7 +324,6 @@ export const createScoreboardMessage = (
 export const parseSlackRequest = (
   payload: any,
 ): RequestResult<"parseSlackRequest", SlackRequest> => {
-  console.log(payload.actions);
   if (payload == "/scoreboard") {
     const req: ShowScoreboardRequest = { command: "/scoreboard" };
     return createRequestSuccess("parseSlackRequest")(req, 200, "");

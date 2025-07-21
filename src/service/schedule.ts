@@ -152,8 +152,6 @@ export const scheduleService = (
         };
         plantRecords.push(message);
       }
-
-      console.log(plantRecords);
       for (const plantRecord of plantRecords) {
         const postMessageArgs = createSlackMessage(plantRecord, CHANNEL_ID);
         const postScheduleCommand = async () => {
