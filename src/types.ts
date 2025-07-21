@@ -1,4 +1,9 @@
 import { Plant, CreatePlantDTO } from "./service/plant";
+import {
+  OpenCompleteTaskModalPayload,
+  DelegateTaskPayload,
+  ResolveCompleteRequestModalPayload,
+} from "./service/slack_interact";
 import { CreateZoneDTO, Zone } from "./service/zone";
 
 export type ListPayload = {
@@ -85,6 +90,32 @@ export type GetEmployeeNamesRequest = {
     channel: string;
   };
 };
+
+export type OpenCompleteRequestModalRequest = {
+  command: "complete-task";
+  payload: OpenCompleteTaskModalPayload;
+};
+
+export type DelegateTaskRequest = {
+  command: "delegate-task";
+  payload: DelegateTaskPayload;
+};
+
+export type ResolveCompleteRequestModalRequest = {
+  command: "complete-task-modal";
+  payload: ResolveCompleteRequestModalPayload;
+};
+
+export type ShowScoreboardRequest = {
+  command: "/scoreboard";
+  payload?: never;
+};
+
+export type SlackRequest =
+  | OpenCompleteRequestModalRequest
+  | DelegateTaskRequest
+  | ResolveCompleteRequestModalRequest
+  | ShowScoreboardRequest;
 
 export type ListRequests =
   | GetPlantListRequest

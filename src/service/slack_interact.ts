@@ -1,5 +1,9 @@
 import { WebClient } from "@slack/web-api";
-import { createRequestFail, createRequestSuccess } from "@src/requests";
+import {
+  createRequestFail,
+  createRequestSuccess,
+  RequestResult,
+} from "@src/requests";
 import { plantRecordService } from "./plant_record";
 import {
   createScoreboardMessage,
@@ -7,8 +11,128 @@ import {
   processRequest,
 } from "./utils";
 import { scoreboardService } from "./scoreboard";
+import { z } from "zod";
+import {
+  DelegateTaskRequest,
+  OpenCompleteRequestModalRequest,
+  ResolveCompleteRequestModalRequest,
+  SlackRequest,
+} from "@src/types";
 
 const CHANNEL_ID = process.env.CHANNEL_ID || "";
+
+const openCompleteTaskModalActionSchema = z.object({
+  uuid: z.string(),
+  employeeName: z.string(),
+});
+
+export const openCompleteTaskModalPayloadSchema = z.object({
+  trigger_id: z.string(),
+  message: z.object({
+    ts: z.string(),
+  }),
+  channel: z.object({
+    id: z.string(),
+  }),
+  user: z.object({
+    id: z.string(),
+    username: z.string(),
+  }),
+  actions: z.array(
+    z.object({
+      value: z.string().transform((val, ctx) => {
+        try {
+          const parsed = JSON.parse(val);
+          return openCompleteTaskModalActionSchema.parse(parsed);
+        } catch (e) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "Invalid JSON or structure in actions[0].value",
+          });
+          return z.NEVER;
+        }
+      }),
+    }),
+  ),
+});
+
+export type OpenCompleteTaskModalPayload = z.infer<
+  typeof openCompleteTaskModalPayloadSchema
+>;
+
+const privateMetadataSchema = z
+  .object({
+    task_uuid: z.string(),
+  })
+  .passthrough();
+
+export const resolveCompleteRequestModalPayloadSchema = z.object({
+  view: z.object({
+    state: z.object({
+      values: z.object({
+        "additional-info-block": z.object({
+          "additional-info-input": z.object({
+            value: z.string().optional().nullable(),
+          }),
+        }),
+      }),
+    }),
+    private_metadata: z.string().transform((val, ctx) => {
+      try {
+        const parsed = JSON.parse(val);
+        return privateMetadataSchema.parse(parsed);
+      } catch (e) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Invalid JSON or structure in actions[0].value",
+        });
+        return z.NEVER;
+      }
+    }),
+    callback_id: z.string(),
+  }),
+  user: z.object({
+    id: z.string(),
+  }),
+});
+
+export type ResolveCompleteRequestModalPayload = z.infer<
+  typeof resolveCompleteRequestModalPayloadSchema
+>;
+
+const actionValueSchema = z.object({
+  uuid: z.string(),
+  employeeName: z.string(),
+  plantName: z.string(),
+});
+
+export const delegateTaskPayloadSchema = z.object({
+  message: z.object({
+    ts: z.string(),
+  }),
+  actions: z.array(
+    z.object({
+      value: z.string().transform((val, ctx) => {
+        try {
+          const parsed = JSON.parse(val);
+          return actionValueSchema.parse(parsed);
+        } catch (e) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "Invalid JSON or structure in actions[0].value",
+          });
+          return z.NEVER;
+        }
+      }),
+    }),
+  ),
+  user: z.object({
+    username: z.string(),
+    id: z.string(),
+  }),
+});
+
+export type DelegateTaskPayload = z.infer<typeof delegateTaskPayloadSchema>;
 
 export const slackInteractService = (
   slack: WebClient,
@@ -16,21 +140,23 @@ export const slackInteractService = (
   scoreboardServiceInstance: ReturnType<typeof scoreboardService>,
 ) => {
   return {
-    async openCompleteTaskModal(payload: any) {
-      const triggerId = payload.trigger_id;
-      const originalMessageTs = payload.message?.ts;
-      const channelId = payload.channel?.id;
-      const userId = payload.user?.id;
-      const buttonData = JSON.parse(payload.actions[0].value);
+    async openCompleteTaskModal(
+      payload: OpenCompleteRequestModalRequest,
+    ): Promise<RequestResult<"slack-request", string>> {
+      const triggerId = payload.payload.trigger_id;
+      const originalMessageTs = payload.payload.message?.ts;
+      const channelId = payload.payload.channel?.id;
+      const userId = payload.payload.user?.id;
+      const buttonData = payload.payload.actions[0].value;
       const taskUuid = buttonData.uuid;
       const assignedEmployeeName = buttonData.employeeName;
       console.log(assignedEmployeeName);
-      if (assignedEmployeeName != payload.user.username) {
+      if (assignedEmployeeName != payload.payload.user.username) {
         try {
           await slack.chat.postEphemeral({
-            channel: payload.channel.id,
-            user: payload.user.id,
-            text: `⚠️ This task is assigned to *${assignedEmployeeName}*. Only they can complete it.\n\nYou are logged in as *${payload.user.username}*.`,
+            channel: CHANNEL_ID,
+            user: payload.payload.user.id,
+            text: `⚠️ This task is assigned to *${assignedEmployeeName}*. Only they can complete it.\n\nYou are logged in as *${payload.payload.user.username}*.`,
           });
         } catch (error) {
           console.error("Error sending ephemeral message:", error);
@@ -39,14 +165,11 @@ export const slackInteractService = (
         return createRequestSuccess("slack-request")("", 200, "");
       }
 
-      const replyThreadTs = payload.message?.thread_ts || originalMessageTs;
-
       if (
         !triggerId ||
         !originalMessageTs ||
         !channelId ||
         !userId ||
-        !replyThreadTs ||
         !taskUuid
       ) {
         createRequestFail("slack-request")(200, "missing parameters");
@@ -54,7 +177,7 @@ export const slackInteractService = (
       const privateMetadata = JSON.stringify({
         original_message_ts: originalMessageTs,
         channel_id: channelId,
-        reply_thread_ts: replyThreadTs,
+        reply_thread_ts: originalMessageTs,
         user_id: userId,
         task_uuid: taskUuid,
         command_used: "complete-task-modal",
@@ -113,14 +236,15 @@ export const slackInteractService = (
       }
       return createRequestSuccess("slack-request")("", 200, "");
     },
-    async resolveCompleteRequestModal(payload: any) {
+    async resolveCompleteRequestModal(
+      payload: ResolveCompleteRequestModalRequest,
+    ): Promise<RequestResult<"slack-request", string>> {
       const additionalInfo =
-        payload.view.state.values["additional-info-block"]?.[
+        payload.payload.view.state.values["additional-info-block"][
           "additional-info-input"
-        ]?.value;
-      const privateMetadata = JSON.parse(payload.view.private_metadata);
+        ].value;
+      const privateMetadata = payload.payload.view.private_metadata;
       const taskUuid = privateMetadata.task_uuid;
-      const channelId = privateMetadata.channel_id;
 
       console.log("Completing task:", taskUuid);
       console.log("Additional info:", additionalInfo);
@@ -134,8 +258,8 @@ export const slackInteractService = (
         if (result.message === "task_already_completed") {
           try {
             await slack.chat.postEphemeral({
-              channel: channelId,
-              user: payload.user.id,
+              channel: CHANNEL_ID,
+              user: payload.payload.user.id,
               text: `🎉 Good news! This task has already been completed`,
             });
             return createRequestSuccess("slack-request")("", 200, "");
@@ -147,8 +271,8 @@ export const slackInteractService = (
       }
       try {
         await slack.chat.postEphemeral({
-          channel: channelId,
-          user: payload.user.id,
+          channel: CHANNEL_ID,
+          user: payload.payload.user.id,
           text: `✅ Task completed successfully!`,
         });
       } catch (error) {
@@ -157,21 +281,19 @@ export const slackInteractService = (
 
       return createRequestSuccess("slack-request")("", 200, "");
     },
-    async delegateTask(payload: any) {
-      console.log(payload);
-      const originalMessageTs = payload.message?.ts;
-      const channelId = payload.channel?.id;
-      const buttonData = JSON.parse(payload.actions[0].value);
+    async delegateTask(
+      payload: DelegateTaskRequest,
+    ): Promise<RequestResult<"slack-request", string>> {
+      const originalMessageTs = payload.payload.message?.ts;
+      const buttonData = payload.payload.actions[0].value;
       const taskUuid = buttonData.uuid;
       const assignedEmployeeName = buttonData.employeeName;
       const plantName = buttonData.plantName;
-      console.log(assignedEmployeeName);
-      console.log(payload.user.username);
-      if (assignedEmployeeName === payload.user.username) {
+      if (assignedEmployeeName === payload.payload.user.username) {
         try {
           await slack.chat.postEphemeral({
-            channel: channelId,
-            user: payload.user.id,
+            channel: CHANNEL_ID,
+            user: payload.payload.user.id,
             text: `You are already assigned to this task!`,
           });
           return createRequestSuccess("slack-request")("", 200, "");
@@ -181,7 +303,7 @@ export const slackInteractService = (
       }
       const result = await plantRecordServiceInstance.delegateTask(
         taskUuid,
-        payload.user.username,
+        payload.payload.user.username,
         plantName,
       );
       if (!result.success) {
@@ -190,7 +312,7 @@ export const slackInteractService = (
       try {
         const deleteMessageCommand = async () => {
           return await slack.chat.delete({
-            channel: channelId,
+            channel: CHANNEL_ID,
             ts: originalMessageTs,
           });
         };
@@ -202,7 +324,7 @@ export const slackInteractService = (
           return deleteMessageResult;
         }
 
-        const postMessageArgs = createSlackMessage(result.data, channelId);
+        const postMessageArgs = createSlackMessage(result.data, CHANNEL_ID);
         const postMessageCommand = async () => {
           return await slack.chat.postMessage(postMessageArgs);
         };
@@ -218,7 +340,7 @@ export const slackInteractService = (
       }
       return createRequestSuccess("slack-request")("", 200, "");
     },
-    async showScoreboard() {
+    async showScoreboard(): Promise<RequestResult<"slack-request", string>> {
       const result = await scoreboardServiceInstance.getScoreboard();
       if (!result.success) {
         return result;
@@ -231,7 +353,10 @@ export const slackInteractService = (
         postMessageCommand,
         "slack-request",
       );
-      return postMessageResult;
+      if (!postMessageResult.success) {
+        return postMessageResult;
+      }
+      return createRequestSuccess("slack-request")("", 200, "");
     },
   };
 };

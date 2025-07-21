@@ -6,8 +6,23 @@ import {
   RequestResult,
 } from "../requests";
 import { z } from "zod";
-import { ListPayload, ListRequests, ListResponse, Req } from "@src/types";
+import {
+  DelegateTaskRequest,
+  ListPayload,
+  ListRequests,
+  ListResponse,
+  OpenCompleteRequestModalRequest,
+  Req,
+  ResolveCompleteRequestModalRequest,
+  ShowScoreboardRequest,
+  SlackRequest,
+} from "@src/types";
 import { PlantRecordMessage } from "./schedule";
+import {
+  delegateTaskPayloadSchema,
+  openCompleteTaskModalPayloadSchema,
+  resolveCompleteRequestModalPayloadSchema,
+} from "./slack_interact";
 
 export const TABLE_NAME = process.env.TABLE_NAME || "Table";
 
@@ -304,4 +319,60 @@ export const createScoreboardMessage = (
     text: message,
     callback_id: "scoreboard",
   };
+};
+
+export const parseSlackRequest = (
+  payload: any,
+): RequestResult<"parseSlackRequest", SlackRequest> => {
+  console.log(payload.actions);
+  if (payload == "/scoreboard") {
+    const req: ShowScoreboardRequest = { command: "/scoreboard" };
+    return createRequestSuccess("parseSlackRequest")(req, 200, "");
+  }
+  if (payload.actions && payload.actions[0].action_id == "complete-task") {
+    const data = parseData(
+      payload,
+      "parseSlackRequest",
+      openCompleteTaskModalPayloadSchema,
+    );
+    if (!data.success) {
+      return createRequestFail("parseSlackRequest")(500, "failed to parse");
+    }
+    const req: OpenCompleteRequestModalRequest = {
+      command: "complete-task",
+      payload: data.data,
+    };
+    return createRequestSuccess("parseSlackRequest")(req, 200, "");
+  }
+  if (payload.actions && payload.actions[0].action_id == "delegate-task") {
+    const data = parseData(
+      payload,
+      "parseSlackRequest",
+      delegateTaskPayloadSchema,
+    );
+    if (!data.success) {
+      return createRequestFail("parseSlackRequest")(500, "failed to parse");
+    }
+    const req: DelegateTaskRequest = {
+      command: "delegate-task",
+      payload: data.data,
+    };
+    return createRequestSuccess("parseSlackRequest")(req, 200, "");
+  }
+  if (payload.view.callback_id == "complete-task-modal") {
+    const data = parseData(
+      payload,
+      "parseSlackRequest",
+      resolveCompleteRequestModalPayloadSchema,
+    );
+    if (!data.success) {
+      return createRequestFail("parseSlackRequest")(500, "failed to parse");
+    }
+    const req: ResolveCompleteRequestModalRequest = {
+      command: "complete-task-modal",
+      payload: data.data,
+    };
+    return createRequestSuccess("parseSlackRequest")(req, 200, "");
+  }
+  return createRequestFail("parseSlackRequest")(400, "invalid payload");
 };

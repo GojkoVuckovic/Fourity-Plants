@@ -4,10 +4,10 @@ import { successResponse, errorResponse } from "./response";
 import { createRequestFail, createRequestSuccess } from "./requests";
 import { Resource } from "sst";
 import * as crypto from "crypto";
+import { parseSlackRequest } from "./service/utils";
 
 const verifyRequest = (event: APIGatewayProxyEvent): boolean => {
   const signingSecret = Resource.SLACK_SIGNING_SECRET.value;
-  console.log(signingSecret);
   if (!event.body) {
     return false;
   }
@@ -74,7 +74,15 @@ export const handler = async (
     }
     const [request, error] = ResolveRequest(event);
     if (request) {
-      const result = await processSlackRequest(request);
+      const parsedRequest = parseSlackRequest(request);
+      if (!parsedRequest.success)
+        return errorResponse(
+          createRequestFail("parse_slack_request")(
+            400,
+            "Invalid Slack request",
+          ),
+        );
+      const result = await processSlackRequest(parsedRequest.data);
       if (result.success) {
         const success = createRequestSuccess("process_request")(
           result.data,

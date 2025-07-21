@@ -9,7 +9,7 @@ import * as scoreboard from "./scoreboard";
 import * as zone from "./zone";
 import * as slack_interact from "./slack_interact";
 import { assertUnreachable, isListRequest, resolveListRequest } from "./utils";
-import { Req } from "../types";
+import { Req, SlackRequest } from "../types";
 import { Resource } from "sst";
 
 const client = new DynamoDBClient({});
@@ -71,39 +71,19 @@ export const ProcessRequest = async (data: Req) => {
   }
 };
 
-export const processSlackRequest = async (payload: any) => {
-  //This is for interactions
-  if (payload.type) {
-    switch (payload.type) {
-      case "block_actions": {
-        const action = payload.actions[0];
-        switch (action.action_id) {
-          case "complete-task":
-            return slackInteractServiceInstance.openCompleteTaskModal(payload);
-          case "delegate-task":
-            return slackInteractServiceInstance.delegateTask(payload);
-          default:
-            return assertUnreachable("Unhandled command")(
-              400,
-              `Unhandled command`,
-            );
-        }
-      }
-      case "view_submission": {
-        return slackInteractServiceInstance.resolveCompleteRequestModal(
-          payload,
-        );
-      }
-      default:
-        return assertUnreachable("Unhandled command")(400, `Unhandled command`);
+export const processSlackRequest = async (payload: SlackRequest) => {
+  switch (payload.command) {
+    case "complete-task": {
+      console.log(payload);
+      return slackInteractServiceInstance.openCompleteTaskModal(payload);
     }
-    //This is for slash commands
-  } else {
-    switch (payload) {
-      case "/scoreboard":
-        return slackInteractServiceInstance.showScoreboard();
-      default:
-        return assertUnreachable("Unhandled command")(400, `Unhandled command`);
-    }
+    case "delegate-task":
+      return slackInteractServiceInstance.delegateTask(payload);
+    case "complete-task-modal":
+      return slackInteractServiceInstance.resolveCompleteRequestModal(payload);
+    case "/scoreboard":
+      return slackInteractServiceInstance.showScoreboard();
+    default:
+      return assertUnreachable("Unhandled command")(400, `Unhandled command`);
   }
 };
