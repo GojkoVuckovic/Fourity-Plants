@@ -141,7 +141,7 @@ export const slackInteractService = (
   return {
     async openCompleteTaskModal(
       payload: OpenCompleteRequestModalRequest,
-    ): Promise<RequestResult<"slack-request", string>> {
+    ): Promise<RequestResult<"complete-task-modal", string>> {
       const triggerId = payload.payload.trigger_id;
       const originalMessageTs = payload.payload.message?.ts;
       const channelId = payload.payload.channel?.id;
@@ -160,7 +160,7 @@ export const slackInteractService = (
           console.error("Error sending ephemeral message:", error);
         }
 
-        return createRequestSuccess("slack-request")("", 200, "");
+        return createRequestSuccess("complete-task-modal")("", 200, "");
       }
 
       if (
@@ -170,7 +170,7 @@ export const slackInteractService = (
         !userId ||
         !taskUuid
       ) {
-        createRequestFail("slack-request")(200, "missing parameters");
+        createRequestFail("complete-task-modal")(200, "missing parameters");
       }
       const privateMetadata = JSON.stringify({
         original_message_ts: originalMessageTs,
@@ -231,11 +231,11 @@ export const slackInteractService = (
       } catch (modalError) {
         console.error("Error opening modal:", modalError);
       }
-      return createRequestSuccess("slack-request")("", 200, "");
+      return createRequestSuccess("complete-task-modal")("", 200, "");
     },
     async resolveCompleteRequestModal(
       payload: ResolveCompleteRequestModalRequest,
-    ): Promise<RequestResult<"slack-request", string>> {
+    ): Promise<RequestResult<"complete-task-resolve", string>> {
       let additionalInfo =
         payload.payload.view.state.values["additional-info-block"][
           "additional-info-input"
@@ -255,7 +255,7 @@ export const slackInteractService = (
               user: payload.payload.user.id,
               text: `🎉 Good news! This task has already been completed`,
             });
-            return createRequestSuccess("slack-request")("", 200, "");
+            return createRequestSuccess("complete-task-resolve")("", 200, "");
           } catch (error) {
             console.error("Error sending ephemeral message:", error);
           }
@@ -272,11 +272,11 @@ export const slackInteractService = (
         console.error("Error sending ephemeral message:", error);
       }
 
-      return createRequestSuccess("slack-request")("", 200, "");
+      return createRequestSuccess("complete-task-resolve")("", 200, "");
     },
     async delegateTask(
       payload: DelegateTaskRequest,
-    ): Promise<RequestResult<"slack-request", string>> {
+    ): Promise<RequestResult<"delegate-task", string>> {
       const originalMessageTs = payload.payload.message?.ts;
       const buttonData = payload.payload.actions[0].value;
       const taskUuid = buttonData.uuid;
@@ -289,7 +289,7 @@ export const slackInteractService = (
             user: payload.payload.user.id,
             text: `You are already assigned to this task!`,
           });
-          return createRequestSuccess("slack-request")("", 200, "");
+          return createRequestSuccess("delegate-task")("", 200, "");
         } catch (error) {
           console.error("Error sending ephemeral message:", error);
         }
@@ -300,7 +300,7 @@ export const slackInteractService = (
         plantName,
       );
       if (!result.success) {
-        return createRequestFail("slack-request")(400, "Error delegating task");
+        return createRequestFail("delegate-task")(400, "Error delegating task");
       }
       try {
         const deleteMessageCommand = async () => {
@@ -311,7 +311,7 @@ export const slackInteractService = (
         };
         const deleteMessageResult = await processRequest(
           deleteMessageCommand,
-          "slack-request",
+          "delegate-task",
         );
         if (!deleteMessageResult.success) {
           return deleteMessageResult;
@@ -323,7 +323,7 @@ export const slackInteractService = (
         };
         const postMessageResult = await processRequest(
           postMessageCommand,
-          "slack-request",
+          "delegate-task",
         );
         if (!postMessageResult.success) {
           return postMessageResult;
@@ -331,9 +331,9 @@ export const slackInteractService = (
       } catch (error) {
         console.error("Error sending ephemeral message:", error);
       }
-      return createRequestSuccess("slack-request")("", 200, "");
+      return createRequestSuccess("delegate-task")("", 200, "");
     },
-    async showScoreboard(): Promise<RequestResult<"slack-request", string>> {
+    async showScoreboard(): Promise<RequestResult<"show-scoreboard", string>> {
       const result = await scoreboardServiceInstance.getScoreboard();
       if (!result.success) {
         return result;
@@ -344,12 +344,12 @@ export const slackInteractService = (
       };
       const postMessageResult = await processRequest(
         postMessageCommand,
-        "slack-request",
+        "show-scoreboard",
       );
       if (!postMessageResult.success) {
         return postMessageResult;
       }
-      return createRequestSuccess("slack-request")("", 200, "");
+      return createRequestSuccess("show-scoreboard")("", 200, "");
     },
   };
 };

@@ -10,7 +10,7 @@ thirtyDaysAgo.setHours(0, 0, 0, 0);
 export const scoreboardService = (db: DynamoDBDocumentClient) => {
   return {
     async getScoreboard(): Promise<
-      RequestResult<"slack-request", { [employee_name: string]: number }>
+      RequestResult<"show-scoreboard", { [employee_name: string]: number }>
     > {
       const getPlantRecordListCommand = async () => {
         const { Items } = await db.send(
@@ -30,13 +30,13 @@ export const scoreboardService = (db: DynamoDBDocumentClient) => {
       };
       const getPlantRecordListResult = await processRequest(
         getPlantRecordListCommand,
-        "slack-request",
+        "show-scoreboard",
       );
       if (!getPlantRecordListResult.success) return getPlantRecordListResult;
       const parsedData = getPlantRecordListResult.data;
       const parseResult = parseData(
         parsedData,
-        "slack-request",
+        "show-scoreboard",
         PlantRecordArraySchema,
       );
       if (!parseResult.success) {
@@ -55,7 +55,11 @@ export const scoreboardService = (db: DynamoDBDocumentClient) => {
           },
           {} as { [employee_name: string]: number },
         );
-      return createRequestSuccess("slack-request")(employeeNameCounts, 200, "");
+      return createRequestSuccess("show-scoreboard")(
+        employeeNameCounts,
+        200,
+        "",
+      );
     },
   };
 };

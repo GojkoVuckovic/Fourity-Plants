@@ -57,7 +57,7 @@ export const plantRecordService = (db: DynamoDBDocumentClient) => {
     async completeTask(
       uuid: string,
       additionalInfo?: string,
-    ): Promise<RequestResult<"slack-request", PlantRecord>> {
+    ): Promise<RequestResult<"complete-task-resolve", PlantRecord>> {
       const getPlantRecordCommand = async () => {
         const { Item } = await db.send(
           new GetCommand({
@@ -73,7 +73,7 @@ export const plantRecordService = (db: DynamoDBDocumentClient) => {
 
       const getPlantRecordResult = await processRequest(
         getPlantRecordCommand,
-        "slack-request",
+        "complete-task-resolve",
       );
       if (!getPlantRecordResult.success) {
         return getPlantRecordResult;
@@ -81,7 +81,7 @@ export const plantRecordService = (db: DynamoDBDocumentClient) => {
 
       const plantRecordParse = parseData(
         getPlantRecordResult.data,
-        "slack-request",
+        "complete-task-resolve",
         PlantRecordSchema,
       );
       if (!plantRecordParse.success) {
@@ -91,7 +91,7 @@ export const plantRecordService = (db: DynamoDBDocumentClient) => {
       const plantRecord = plantRecordParse.data;
 
       if (plantRecord.data.resolved) {
-        return createRequestFail("slack-request")(
+        return createRequestFail("complete-task-resolve")(
           200,
           "task_already_completed",
         );
@@ -127,7 +127,7 @@ export const plantRecordService = (db: DynamoDBDocumentClient) => {
 
       const updatePlantRecordResult = await processRequest(
         updatePlantRecordCommand,
-        "slack-request",
+        "complete-task-resolve",
       );
       if (!updatePlantRecordResult.success) {
         return updatePlantRecordResult;
@@ -148,7 +148,7 @@ export const plantRecordService = (db: DynamoDBDocumentClient) => {
 
       const getPlantResult = await processRequest(
         getPlantCommand,
-        "slack-request",
+        "complete-task-resolve",
       );
       if (!getPlantResult.success) {
         return getPlantResult;
@@ -156,7 +156,7 @@ export const plantRecordService = (db: DynamoDBDocumentClient) => {
 
       const plantParse = parseData(
         getPlantResult.data,
-        "slack-request",
+        "complete-task-resolve",
         PlantSchema,
       );
       if (!plantParse.success) {
@@ -196,13 +196,13 @@ export const plantRecordService = (db: DynamoDBDocumentClient) => {
 
       const updatePlantResult = await processRequest(
         updatePlantCommand,
-        "slack-request",
+        "complete-task-resolve",
       );
       if (!updatePlantResult.success) {
         return updatePlantResult;
       }
 
-      return createRequestSuccess("slack-request")(
+      return createRequestSuccess("complete-task-resolve")(
         {
           uuid: plantRecordDatabase.SK,
           resolved: plantRecordDatabase.data.resolved,
