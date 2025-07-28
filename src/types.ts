@@ -84,6 +84,11 @@ export type CreateScheduleRequest = {
   payload?: never;
 };
 
+export type GetScheduleRequest = {
+  command: "getSchedule";
+  payload?: never;
+};
+
 export type GetEmployeeNamesRequest = {
   command: "getEmployeeNames";
   payload: {
@@ -111,6 +116,11 @@ export type ShowScoreboardRequest = {
   payload?: never;
 };
 
+export type GetScoreboardRequest = {
+  command: "getScoreboard";
+  payload?: never;
+};
+
 export type SlackRequest =
   | OpenCompleteRequestModalRequest
   | DelegateTaskRequest
@@ -125,7 +135,9 @@ export type ListRequests =
 export type GetRequests =
   | GetEmployeeNamesRequest
   | GetPlantRequest
-  | GetZoneRequest;
+  | GetZoneRequest
+  | GetScheduleRequest
+  | GetScoreboardRequest;
 
 export type CreateRequests =
   | CreatePlantRequest

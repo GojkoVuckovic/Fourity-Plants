@@ -66,6 +66,10 @@ export const ProcessRequest = async (data: Req) => {
       return scheduleServiceInstance.createSchedule(data);
     case "getEmployeeNames":
       return employeeServiceInstance.getEmployeeNames(data);
+    case "getSchedule":
+      return scheduleServiceInstance.getSchedule(data);
+    case "getScoreboard":
+      return scoreboardServiceInstance.getScoreboard();
     default:
       return assertUnreachable("Unhandled command")(400, `Unhandled command`);
   }
@@ -74,7 +78,6 @@ export const ProcessRequest = async (data: Req) => {
 export const processSlackRequest = async (payload: SlackRequest) => {
   switch (payload.command) {
     case "complete-task": {
-      console.log(payload);
       return slackInteractServiceInstance.openCompleteTaskModal(payload);
     }
     case "delegate-task":

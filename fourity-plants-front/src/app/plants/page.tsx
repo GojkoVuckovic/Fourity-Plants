@@ -1,6 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
-import Link from "next/link";
+import { useState, useEffect, useRef, useCallback } from "react";
 
 interface CardProps {
   name: string;
@@ -15,7 +14,9 @@ interface CardProps {
 
 interface EditableCardProps extends CardProps {}
 
-const Card: React.FC<CardProps & { onEdit: () => void }> = ({
+const Card: React.FC<
+  CardProps & { onEdit: (index: number) => void; index: number }
+> = ({
   name,
   additionalInfo,
   lastTimeWatered,
@@ -25,6 +26,7 @@ const Card: React.FC<CardProps & { onEdit: () => void }> = ({
   imageUrl,
   imageAlt = "Card image",
   onEdit,
+  index,
 }) => {
   return (
     <div className="bg-white rounded-xl shadow-lg overflow-hidden flex flex-col max-w-sm mx-auto my-4 transform transition-transform duration-300 hover:scale-105 hover:shadow-xl">
@@ -34,11 +36,13 @@ const Card: React.FC<CardProps & { onEdit: () => void }> = ({
             src={imageUrl}
             alt={imageAlt}
             className="absolute inset-0 w-full h-full object-cover"
+            onError={(e) => {
+              e.currentTarget.src = `https://placehold.co/400x200/black/ffffff?text=${encodeURIComponent(name)}`;
+            }}
           />
         </div>
       )}
 
-      {/* Card Content */}
       <div className="p-6 flex flex-col flex-grow">
         <h3 className="text-xl font-bold text-gray-900 mb-2">{name}</h3>
         <p className="text-gray-700 text-base flex-grow mb-4">
@@ -56,9 +60,8 @@ const Card: React.FC<CardProps & { onEdit: () => void }> = ({
         <p className="text-gray-700 text-base flex-grow mb-4">
           Last Time Sunlit: {lastTimeSunlit}
         </p>
-        {/* Edit Button */}
         <button
-          onClick={onEdit}
+          onClick={() => onEdit(index)}
           className="inline-block bg-green-500 text-white font-medium py-2 px-4 rounded-lg text-center transition-colors duration-200 self-start"
         >
           Edit
@@ -71,16 +74,16 @@ const Card: React.FC<CardProps & { onEdit: () => void }> = ({
 const defaultImageUrl = (name: string) =>
   `https://placehold.co/400x200/black/ffffff?text=${encodeURIComponent(name)}`;
 
-const getInitialCards = (recipes: any[]): EditableCardProps[] =>
-  recipes.map((recipe) => ({
-    name: recipe.name,
-    additionalInfo: recipe.instructions,
-    waterRequirement: 2,
-    sunRequirement: 2,
-    lastTimeWatered: new Date().toDateString(),
-    lastTimeSunlit: new Date().toDateString(),
-    imageUrl: defaultImageUrl(recipe.name),
-    imageAlt: recipe.name,
+const getInitialCards = (plants: any[]): EditableCardProps[] =>
+  plants.map((plant) => ({
+    name: plant.name,
+    additionalInfo: plant.additionalInfo,
+    waterRequirement: plant.waterRequirement,
+    sunRequirement: plant.sunRequirement,
+    lastTimeWatered: new Date(plant.lastTimeWatered).toDateString(),
+    lastTimeSunlit: new Date(plant.lastTimeSunlit).toDateString(),
+    imageUrl: plant.picture || defaultImageUrl(plant.name),
+    imageAlt: plant.name,
   }));
 
 const Modal: React.FC<{
@@ -107,7 +110,6 @@ const Modal: React.FC<{
 
   if (!isOpen || !card) return null;
 
-  // Helper for input changes
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
   ) => {
@@ -126,12 +128,10 @@ const Modal: React.FC<{
         fixed inset-0 z-50 flex items-center justify-center p-4
       `}
     >
-      {/* Blur and Dim Background */}
       <div
         className="absolute inset-0 backdrop-blur-sm bg-black/30"
         aria-hidden="true"
       />
-      {/* Modal Content */}
       <div
         onClick={(e) => e.stopPropagation()}
         className={`
@@ -274,25 +274,120 @@ const Modal: React.FC<{
 };
 
 export default function PlantsPage() {
-  const [cards, setCards] = useState<EditableCardProps[]>([]);
+  const [allCards, setAllCards] = useState<EditableCardProps[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  const [startKey, setStartKey] = useState<string | null>(null);
+
+  const CARDS_PER_LOAD = 5;
+
+  // Refs to hold mutable values for event listener closure without causing re-renders
+  const loadingRef = useRef(loading);
+  const hasMoreRef = useRef(hasMore);
+  const startKeyRef = useRef(startKey);
+
+  // Update refs whenever the corresponding state changes
+  useEffect(() => {
+    loadingRef.current = loading;
+  }, [loading]);
+
+  useEffect(() => {
+    hasMoreRef.current = hasMore;
+  }, [hasMore]);
+
+  useEffect(() => {
+    startKeyRef.current = startKey;
+  }, [startKey]);
+
+  // Make fetchCards a stable function using useCallback
+  // It now accepts the startKey as an argument for more explicit control
+  const fetchCards = useCallback(async (currentStartKey: string | null) => {
+    if (loadingRef.current || !hasMoreRef.current) {
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await fetch(
+        "https://km5vtry5xcfu2xzboyytvu43i40vnzms.lambda-url.eu-central-1.on.aws/",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            command: "getPlantList",
+            payload: { pageSize: CARDS_PER_LOAD, startKey: currentStartKey },
+          }),
+        },
+      );
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const outerData = await response.json();
+      const newPlants = outerData.data.data;
+      const nextStartKey =
+        newPlants.length > 0 ? newPlants[newPlants.length - 1].uuid : null;
+
+      setAllCards((prevCards) => [...prevCards, ...getInitialCards(newPlants)]);
+      setStartKey(nextStartKey);
+      setHasMore(newPlants.length > 0);
+    } catch (error) {
+      console.error("Failed to fetch plants:", error);
+      setHasMore(false);
+    } finally {
+      setLoading(false);
+    }
+  }, []); // Empty dependency array: fetchCards is now truly stable
+
+  // --- Initial Load Effect (Runs strictly once per mount) ---
+  const didFetch = useRef(false);
+
+  useEffect(() => {
+    if (didFetch.current) return;
+    didFetch.current = true;
+
+    setAllCards([]);
+    setLoading(false);
+    setHasMore(true);
+    setStartKey(null);
+
+    fetchCards(null);
+  }, [fetchCards]); // `fetchCards` is a stable reference, so this effect runs once on mount
+
+  // --- Scroll Listener Effect (Sets up and tears down only once) ---
+  useEffect(() => {
+    const handleScroll = () => {
+      if (
+        window.innerHeight + window.scrollY >=
+          document.documentElement.scrollHeight - 100 &&
+        !loadingRef.current &&
+        hasMoreRef.current
+      ) {
+        // Subsequent fetches use the current startKey from the ref
+        fetchCards(startKeyRef.current);
+      }
+    };
+
+    window.addEventListener("scroll", handleScroll);
+
+    // Cleanup function: This runs when the component unmounts
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+    };
+  }, [fetchCards]); // `fetchCards` is a stable reference, so this effect runs only once for setup/cleanup
+
   const [modalOpen, setModalOpen] = useState(false);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [editingCard, setEditingCard] = useState<EditableCardProps | null>(
     null,
   );
 
-  // Fetch recipes and initialize cards
-  useEffect(() => {
-    fetch("https://dummyjson.com/recipes")
-      .then((res) => res.json())
-      .then((data) => {
-        setCards(getInitialCards(data.recipes));
-      });
-  }, []);
-
   const handleEdit = (index: number) => {
     setEditingIndex(index);
-    setEditingCard({ ...cards[index] });
+    setEditingCard({ ...allCards[index] });
     setModalOpen(true);
   };
 
@@ -308,23 +403,39 @@ export default function PlantsPage() {
 
   const handleModalConfirm = () => {
     if (editingIndex !== null && editingCard) {
-      const updatedCards = [...cards];
-      updatedCards[editingIndex] = editingCard;
-      setCards(updatedCards);
+      const updatedAllCards = [...allCards];
+      updatedAllCards[editingIndex] = editingCard;
+      setAllCards(updatedAllCards);
     }
     handleModalClose();
   };
 
   return (
-    <main className="flex-1 p-8">
+    <main className="flex-1 p-8 min-h-screen font-sans">
       <h2 className="text-3xl font-bold text-white mb-6 text-center">
-        All the plants
+        All the Plants
       </h2>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {cards.map((card, idx) => (
-          <Card key={idx} {...card} onEdit={() => handleEdit(idx)} />
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+        {allCards.map((card, idx) => (
+          <Card key={idx} {...card} onEdit={handleEdit} index={idx} />
         ))}
       </div>
+      {loading && (
+        <div className="text-center text-white text-lg mt-8 mb-4">
+          Loading more plants...
+        </div>
+      )}
+      {!loading && !hasMore && allCards.length > 0 && (
+        <div className="text-center text-white text-md mt-8 mb-4">
+          You've seen all the plants!
+        </div>
+      )}
+      {allCards.length === 0 && !loading && !hasMore && (
+        <div className="text-center text-white text-md mt-8 mb-4">
+          No plants to display.
+        </div>
+      )}
+
       <Modal
         isOpen={modalOpen}
         onClose={handleModalClose}

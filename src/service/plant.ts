@@ -275,6 +275,7 @@ export const plantService = (db: DynamoDBDocumentClient) => {
         req.command,
       );
       if (!getPlantListResult.success) return getPlantListResult;
+      console.log(getPlantListResult.data.LastEvaluatedKey);
       const parsedData = getPlantListResult.data.Items;
       const parseResult = parseData(
         parsedData,

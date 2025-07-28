@@ -8,10 +8,19 @@ import {
   DynamoDBDocumentClient,
   GetCommand,
   PutCommand,
+  QueryCommand,
 } from "@aws-sdk/lib-dynamodb";
-import { createRequestSuccess, RequestResult } from "../requests";
-import { CreateScheduleRequest } from "../types";
-import { PlantRecordDatabase } from "./plant_record";
+import {
+  createRequestSuccess,
+  RequestResult,
+  createRequestFail,
+} from "../requests";
+import { CreateScheduleRequest, GetScheduleRequest } from "../types";
+import {
+  PlantRecordDatabase,
+  PlantRecordArraySchema,
+  PlantRecord,
+} from "./plant_record";
 import { WebClient } from "@slack/web-api";
 import { QueryResult } from "../types";
 import { createQueryCommand, resolvePlantDuty } from "./utils";
@@ -170,6 +179,53 @@ export const scheduleService = (
         200,
         "successfully created a schedule",
       );
+    },
+    async getSchedule(
+      req: GetScheduleRequest,
+    ): Promise<RequestResult<"get-schedule", PlantRecord[]>> {
+      const getPlantRecordListCommand = async () => {
+        const { Items } = await db.send(
+          new QueryCommand({
+            TableName: TABLE_NAME,
+            IndexName: "TypeIndex",
+            KeyConditionExpression: "#typeAttr = :typeValue",
+            ExpressionAttributeNames: {
+              "#typeAttr": "type",
+            },
+            ExpressionAttributeValues: {
+              ":typeValue": "PLANT_RECORD",
+            },
+          }),
+        );
+        return Items;
+      };
+      const getPlantRecordListResult = await processRequest(
+        getPlantRecordListCommand,
+        "get-schedule",
+      );
+      if (!getPlantRecordListResult.success) return getPlantRecordListResult;
+      const parsedData = getPlantRecordListResult.data;
+      const parseResult = parseData(
+        parsedData,
+        "get-schedule",
+        PlantRecordArraySchema,
+      );
+      if (!parseResult.success) {
+        return parseResult;
+      }
+      const schedule = parseResult.data.filter((record: PlantRecord) => {
+        const recordDate = new Date(record.date);
+        const today = new Date();
+
+        today.setUTCHours(0, 0, 0, 0);
+        return (
+          record.resolved === false && recordDate.getDay() === today.getDay()
+        );
+      });
+      if (!schedule.length) {
+        return createRequestFail("get-schedule")(404, "No schedule found");
+      }
+      return createRequestSuccess("get-schedule")(schedule, 200, "");
     },
   };
 };
