@@ -67,11 +67,8 @@ const PlantTable: React.FC<PlantRecordTableProps> = ({
   return (
     <div className="overflow-x-auto">
       {loading && (
-        <div className="p-4 text-center text-white">Loading plant data...</div>
-      )}
-      {error && (
-        <div className="p-4 text-center text-red-500">
-          Error loading data: {error}
+        <div className="p-4 text-center text-gray-800">
+          Loading plant data...
         </div>
       )}
       <div className="overflow-x-auto">
@@ -81,7 +78,7 @@ const PlantTable: React.FC<PlantRecordTableProps> = ({
               {entityFields.map((field) => (
                 <th
                   key={field.value}
-                  className="py-3 px-6 text-xs font-medium text-gray-50 uppercase tracking-wider"
+                  className="py-3 px-6 text-xs font-medium text-gray-700 uppercase tracking-wider"
                 >
                   {field.label}
                 </th>
@@ -94,7 +91,7 @@ const PlantTable: React.FC<PlantRecordTableProps> = ({
                 {entityFields.map((field) => (
                   <td
                     key={`${plantRecord.plantUuid}-${field.value}`}
-                    className="py-4 px-6 whitespace-nowrap text-sm text-white bg-transparent"
+                    className="py-4 px-6 whitespace-nowrap text-sm text-gray-800 bg-transparent"
                   >
                     {field.value === "plantUuid" ? (
                       <button
@@ -127,7 +124,9 @@ const PlantTable: React.FC<PlantRecordTableProps> = ({
           </tbody>
         </table>
         {plantRecords.length === 0 && (
-          <p className="p-4 text-center text-white">No plant data available.</p>
+          <p className="p-4 text-center text-gray-800">
+            No plant data available.
+          </p>
         )}
         {isModalOpen && (
           <div
@@ -164,7 +163,7 @@ const PlantTable: React.FC<PlantRecordTableProps> = ({
               </p>
               <button
                 onClick={handleCloseModal}
-                className="mt-6 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
+                className="mt-6 px-4 py-2 bg-blue-500 text-gray-800 rounded hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
               >
                 Close
               </button>
@@ -208,10 +207,6 @@ export default function Home() {
           },
         );
 
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
         const result = await response.json();
 
         if (result.data && Array.isArray(result.data)) {
@@ -234,7 +229,7 @@ export default function Home() {
 
   return (
     <>
-      <h1 className="text-4xl text-center font-bold mb-5 text-white">
+      <h1 className="text-4xl text-center font-bold mb-5 text-gray-800">
         Welcome to Fourity Plants, Here are today's tasks
       </h1>
       <PlantTable plantRecords={plantRecords} loading={loading} error={error} />

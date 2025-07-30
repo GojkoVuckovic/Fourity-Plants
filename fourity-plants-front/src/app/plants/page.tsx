@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, useRef, useCallback } from "react";
+import { FaEdit } from "react-icons/fa";
 
 interface CardProps {
   name: string;
@@ -29,7 +30,7 @@ const Card: React.FC<
   index,
 }) => {
   return (
-    <div className="bg-white rounded-xl shadow-lg overflow-hidden flex flex-col max-w-sm mx-auto my-4 transform transition-transform duration-300 hover:scale-105 hover:shadow-xl">
+    <div className="bg-dirty-white rounded-xl shadow-lg overflow-hidden flex flex-col max-w-sm mx-auto my-4 transform transition-transform duration-300 hover:scale-105 hover:shadow-xl">
       {imageUrl && (
         <div className="relative h-48 w-full">
           <img
@@ -43,8 +44,12 @@ const Card: React.FC<
         </div>
       )}
 
-      <div className="p-6 flex flex-col flex-grow">
-        <h3 className="text-xl font-bold text-gray-900 mb-2">{name}</h3>
+      <div className="p-6 flex flex-col flex-grow relative">
+        <h3 className="text-xl font-bold text-gray-900 text-center">{name}</h3>
+        <FaEdit
+          className="absolute top-6 right-6 hover:cursor-pointer"
+          onClick={() => onEdit(index)}
+        ></FaEdit>
         <p className="text-gray-700 text-base flex-grow mb-4">
           {additionalInfo}
         </p>
@@ -60,12 +65,6 @@ const Card: React.FC<
         <p className="text-gray-700 text-base flex-grow mb-4">
           Last Time Sunlit: {lastTimeSunlit}
         </p>
-        <button
-          onClick={() => onEdit(index)}
-          className="inline-block bg-green-500 text-white font-medium py-2 px-4 rounded-lg text-center transition-colors duration-200 self-start"
-        >
-          Edit
-        </button>
       </div>
     </div>
   );
@@ -135,7 +134,7 @@ const Modal: React.FC<{
       <div
         onClick={(e) => e.stopPropagation()}
         className={`
-          relative bg-white rounded-lg p-6 shadow-xl max-w-xl w-full z-10
+          relative bg-dirty-white rounded-lg p-6 shadow-xl max-w-xl w-full z-10
           transform transition-all duration-300 ease-out
           ${showModalContent ? "scale-100 opacity-100" : "scale-95 opacity-0"}
         `}
@@ -157,7 +156,7 @@ const Modal: React.FC<{
               name="name"
               value={card.name}
               onChange={handleInputChange}
-              className="mt-1 p-2 border rounded"
+              className="mt-1 bg-white/50 p-2 border rounded"
               required
             />
           </label>
@@ -167,7 +166,7 @@ const Modal: React.FC<{
               name="additionalInfo"
               value={card.additionalInfo}
               onChange={handleInputChange}
-              className="mt-1 p-2 border rounded"
+              className="mt-1 bg-white/50 p-2 border rounded"
               rows={2}
             />
           </label>
@@ -178,7 +177,7 @@ const Modal: React.FC<{
               name="waterRequirement"
               value={card.waterRequirement}
               onChange={handleInputChange}
-              className="mt-1 p-2 border rounded"
+              className="mt-1 bg-white/50 p-2 border rounded"
               min={1}
             />
           </label>
@@ -189,7 +188,7 @@ const Modal: React.FC<{
               name="sunRequirement"
               value={card.sunRequirement}
               onChange={handleInputChange}
-              className="mt-1 p-2 border rounded"
+              className="mt-1 bg-white/50 p-2 border rounded"
               min={1}
             />
           </label>
@@ -206,7 +205,7 @@ const Modal: React.FC<{
               }
               max={new Date().toISOString().split("T")[0]}
               onChange={handleInputChange}
-              className="mt-1 p-2 border rounded"
+              className="mt-1 bg-white/50 p-2 border rounded"
             />
           </label>
           <label className="flex flex-col text-left text-gray-700 font-medium">
@@ -222,7 +221,7 @@ const Modal: React.FC<{
               }
               max={new Date().toISOString().split("T")[0]}
               onChange={handleInputChange}
-              className="mt-1 p-2 border rounded"
+              className="mt-1 bg-white/50 p-2 border rounded"
             />
           </label>
           <label className="flex flex-col text-left text-gray-700 font-medium">
@@ -232,7 +231,7 @@ const Modal: React.FC<{
               name="imageUrl"
               value={card.imageUrl || ""}
               onChange={handleInputChange}
-              className="mt-1 p-2 border rounded"
+              className="mt-1 bg-white/50 p-2 border rounded"
             />
           </label>
           <label className="flex flex-col text-left text-gray-700 font-medium">
@@ -242,20 +241,20 @@ const Modal: React.FC<{
               name="imageAlt"
               value={card.imageAlt || ""}
               onChange={handleInputChange}
-              className="mt-1 p-2 border rounded"
+              className="mt-1 bg-white/50 p-2 border rounded"
             />
           </label>
           <div className="flex justify-end gap-2 mt-4">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 focus:outline-none"
+              className="px-4 py-2 bg-coral text-gray-700 rounded hover:bg-coral-warning focus:outline-none"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 focus:outline-none"
+              className="px-4 py-2 bg-greenish-grey text-gray-800 rounded hover:bg-greenish-grey-darker focus:outline-none"
             >
               Confirm
             </button>
@@ -412,7 +411,7 @@ export default function PlantsPage() {
 
   return (
     <main className="flex-1 p-8 min-h-screen font-sans">
-      <h2 className="text-3xl font-bold text-white mb-6 text-center">
+      <h2 className="text-3xl font-bold text-gray-800 mb-6 text-center">
         All the Plants
       </h2>
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
@@ -421,17 +420,17 @@ export default function PlantsPage() {
         ))}
       </div>
       {loading && (
-        <div className="text-center text-white text-lg mt-8 mb-4">
+        <div className="text-center text-gray-800 text-lg mt-8 mb-4">
           Loading more plants...
         </div>
       )}
       {!loading && !hasMore && allCards.length > 0 && (
-        <div className="text-center text-white text-md mt-8 mb-4">
+        <div className="text-center text-gray-800 text-md mt-8 mb-4">
           You've seen all the plants!
         </div>
       )}
       {allCards.length === 0 && !loading && !hasMore && (
-        <div className="text-center text-white text-md mt-8 mb-4">
+        <div className="text-center text-gray-800 text-md mt-8 mb-4">
           No plants to display.
         </div>
       )}

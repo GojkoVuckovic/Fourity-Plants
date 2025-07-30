@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { ZoneCard } from "./ZoneCard";
+import { FaPlus } from "react-icons/fa";
 
 interface ZoneData {
   id: string;
@@ -120,21 +121,14 @@ export default function ZoneManagementPage() {
           </h1>
           <button
             onClick={handleCreateNew}
-            className="mt-4 px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600"
+            className="mt-6 px-4 py-2 bg-coral text-gray-800 rounded-md hover:cursor-pointer"
           >
             Create New Zone
           </button>
         </div>
-
-        {notification && (
-          <div className="mb-6 p-4 bg-green-100 text-green-700 rounded-md">
-            {notification}
-          </div>
-        )}
-
         <div className="flex flex-col lg:flex-row gap-8">
           <div className="lg:w-1/4">
-            <div className="bg-white p-4 rounded-lg shadow-md">
+            <div className="bg-dirty-white p-4 rounded-lg shadow-md">
               <h2 className="text-xl font-semibold mb-4">Zones</h2>
               <ul className="space-y-2">
                 {zones.map((zone) => (
@@ -147,8 +141,8 @@ export default function ZoneManagementPage() {
                       }}
                       className={`w-full text-left p-2 rounded-md transition-colors ${
                         selectedZoneId === zone.id
-                          ? "bg-blue-100 text-blue-800 font-medium"
-                          : "hover:bg-gray-100"
+                          ? "bg-coral text-gray-800 font-medium"
+                          : "hover:bg-gray-100/60"
                       }`}
                     >
                       {zone.name}
@@ -178,9 +172,9 @@ export default function ZoneManagementPage() {
             )}
           </div>
 
-          {isEditing && (
-            <div className="lg:w-1/4">
-              <div className="bg-white p-4 rounded-lg shadow-md">
+          <div className={`lg:w-1/4 ${!isEditing ? "invisible" : ""}`}>
+            {isEditing && (
+              <div className="bg-dirty-white p-4 rounded-lg shadow-md">
                 <h2 className="text-xl font-semibold mb-4">Manage Resources</h2>
 
                 <div className="flex space-x-2 mb-4">
@@ -188,7 +182,7 @@ export default function ZoneManagementPage() {
                     onClick={() => setActiveResource("employees")}
                     className={`flex-1 py-2 rounded-md ${
                       activeResource === "employees"
-                        ? "bg-blue-500 text-white"
+                        ? "bg-coral text-gray-800"
                         : "bg-gray-200 hover:bg-gray-300"
                     }`}
                   >
@@ -198,7 +192,7 @@ export default function ZoneManagementPage() {
                     onClick={() => setActiveResource("plants")}
                     className={`flex-1 py-2 rounded-md ${
                       activeResource === "plants"
-                        ? "bg-blue-500 text-white"
+                        ? "bg-coral text-gray-800"
                         : "bg-gray-200 hover:bg-gray-300"
                     }`}
                   >
@@ -209,7 +203,7 @@ export default function ZoneManagementPage() {
                 <button
                   onClick={fetchResources}
                   disabled={isLoading}
-                  className="w-full mb-4 px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 disabled:bg-blue-300"
+                  className="w-full mb-4 px-4 py-2 bg-coral text-gray-800 rounded-md hover:cursor-pointer"
                 >
                   {isLoading ? "Fetching..." : "Fetch Resources"}
                 </button>
@@ -218,27 +212,24 @@ export default function ZoneManagementPage() {
                   {resourceList.map((resource, index) => (
                     <div
                       key={`${resource}-${index}`}
-                      className="flex items-center justify-between bg-gray-100 p-2 rounded"
+                      className="flex items-center justify-between bg-white/50 p-2 rounded"
                     >
                       <span>{resource}</span>
-                      <button
+                      <FaPlus
                         onClick={() => addResourceToZone(resource)}
-                        className="px-2 py-1 bg-green-500 text-white rounded hover:bg-green-600"
-                        disabled={!currentZoneData}
+                        className="hover:cursor-pointer"
                         title={
                           currentZoneData
                             ? `Add to ${currentZoneData.name}`
                             : "Select a zone first"
                         }
-                      >
-                        +
-                      </button>
+                      ></FaPlus>
                     </div>
                   ))}
                 </div>
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </div>
     </div>

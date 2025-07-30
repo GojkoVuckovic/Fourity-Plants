@@ -1,5 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
+import { FaEdit } from "react-icons/fa";
+import { FaDeleteLeft } from "react-icons/fa6";
 
 interface ZoneData {
   id: string;
@@ -61,14 +63,12 @@ export const ZoneCard: React.FC<ZoneCardProps> = ({
   };
 
   return (
-    <div className="w-[70%] border rounded-lg shadow-md p-6 bg-white relative">
+    <div className="w-[100%] rounded-lg shadow-md p-6 bg-dirty-white relative">
       {!isEditing && (
-        <button
+        <FaEdit
+          className="absolute top-4 right-4 hover:cursor-pointer"
           onClick={() => setIsEditing(!isEditing)}
-          className={`absolute top-4 right-4 px-3 py-1 rounded-md bg-blue-500 text-white hover:bg-blue-600`}
-        >
-          Edit
-        </button>
+        ></FaEdit>
       )}
       <div className="mb-6">
         <label
@@ -83,7 +83,7 @@ export const ZoneCard: React.FC<ZoneCardProps> = ({
           value={zoneData.name}
           onChange={handleNameChange}
           disabled={!isEditing}
-          className={`shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline ${
+          className={`shadow  bg-white/50 appearance-none rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline ${
             !isEditing ? "bg-gray-100" : ""
           }`}
         />
@@ -96,17 +96,14 @@ export const ZoneCard: React.FC<ZoneCardProps> = ({
             zoneData.employeeNames.map((name, index) => (
               <div
                 key={`${name}-${index}`}
-                className="flex items-center justify-between bg-gray-100 p-2 rounded"
+                className="flex items-center justify-between bg-white/50 p-2 rounded"
               >
                 <span>{name}</span>
                 {isEditing && (
-                  <button
+                  <FaDeleteLeft
                     onClick={() => removeEmployee(index)}
-                    className="text-red-500 hover:text-red-700"
-                    aria-label={`Remove employee ${name}`}
-                  >
-                    ×
-                  </button>
+                    className="hover:cursor-pointer"
+                  ></FaDeleteLeft>
                 )}
               </div>
             ))
@@ -123,17 +120,14 @@ export const ZoneCard: React.FC<ZoneCardProps> = ({
             zoneData.plantUuid.map((uuid, index) => (
               <div
                 key={`${uuid}-${index}`}
-                className="flex items-center justify-between bg-gray-100 p-2 rounded"
+                className="flex items-center justify-between bg-white/50 p-2 rounded"
               >
                 <span>{uuid}</span>
                 {isEditing && (
-                  <button
+                  <FaDeleteLeft
                     onClick={() => removePlant(index)}
-                    className="text-red-500 hover:text-red-700"
-                    aria-label={`Remove plant ${uuid}`}
-                  >
-                    ×
-                  </button>
+                    className="hover:cursor-pointer"
+                  ></FaDeleteLeft>
                 )}
               </div>
             ))
@@ -147,13 +141,13 @@ export const ZoneCard: React.FC<ZoneCardProps> = ({
         <div className="flex justify-end space-x-4 mt-6">
           <button
             onClick={handleCancel}
-            className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+            className="px-4 py-2 bg-coral-dark rounded-md text-gray-700 hover:cursor-pointer hover:bg-coral-warning"
           >
             Cancel
           </button>
           <button
             onClick={handleSave}
-            className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
+            className="px-4 py-2 bg-greenish-grey text-white rounded-md hover:bg-greenish-grey-darker hover:cursor-pointer"
           >
             Save Changes
           </button>
