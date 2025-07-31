@@ -2,7 +2,8 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { FaEdit } from "react-icons/fa";
 
-interface CardProps {
+interface PlantDto {
+  uuid: string;
   name: string;
   additionalInfo: string;
   imageUrl?: string;
@@ -11,12 +12,13 @@ interface CardProps {
   waterRequirement: number;
   lastTimeWatered: string;
   lastTimeSunlit: string;
+  zoneUuid: string;
 }
 
-interface EditableCardProps extends CardProps {}
+interface EditablePlantDto extends PlantDto {}
 
-const Card: React.FC<
-  CardProps & { onEdit: (index: number) => void; index: number }
+const Plant: React.FC<
+  PlantDto & { onEdit: (index: number) => void; index: number }
 > = ({
   name,
   additionalInfo,
@@ -25,7 +27,7 @@ const Card: React.FC<
   waterRequirement,
   sunRequirement,
   imageUrl,
-  imageAlt = "Card image",
+  imageAlt = "Plant image",
   onEdit,
   index,
 }) => {
@@ -73,9 +75,11 @@ const Card: React.FC<
 const defaultImageUrl = (name: string) =>
   `https://placehold.co/400x200/black/ffffff?text=${encodeURIComponent(name)}`;
 
-const getInitialCards = (plants: any[]): EditableCardProps[] =>
+const getInitialPlants = (plants: any[]): EditablePlantDto[] =>
   plants.map((plant) => ({
+    uuid: plant.uuid,
     name: plant.name,
+    zoneUuid: plant.zoneUuid,
     additionalInfo: plant.additionalInfo,
     waterRequirement: plant.waterRequirement,
     sunRequirement: plant.sunRequirement,
@@ -88,10 +92,10 @@ const getInitialCards = (plants: any[]): EditableCardProps[] =>
 const Modal: React.FC<{
   isOpen: boolean;
   onClose: () => void;
-  card: EditableCardProps | null;
-  onChange: (card: EditableCardProps) => void;
+  plant: EditablePlantDto | null;
+  onChange: (plant: EditablePlantDto) => void;
   onConfirm: () => void;
-}> = ({ isOpen, onClose, card, onChange, onConfirm }) => {
+}> = ({ isOpen, onClose, plant, onChange, onConfirm }) => {
   const [showModalContent, setShowModalContent] = useState(false);
 
   useEffect(() => {
@@ -107,16 +111,16 @@ const Modal: React.FC<{
     };
   }, [isOpen]);
 
-  if (!isOpen || !card) return null;
+  if (!isOpen || !plant) return null;
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
   ) => {
     const { name, value } = e.target;
     if (name === "waterRequirement" || name === "sunRequirement") {
-      onChange({ ...card, [name]: Number(value) });
+      onChange({ ...plant, [name]: Number(value) });
     } else {
-      onChange({ ...card, [name]: value });
+      onChange({ ...plant, [name]: value });
     }
   };
 
@@ -154,7 +158,7 @@ const Modal: React.FC<{
             <input
               type="text"
               name="name"
-              value={card.name}
+              value={plant.name}
               onChange={handleInputChange}
               className="mt-1 bg-white/50 p-2 border rounded"
               required
@@ -164,7 +168,7 @@ const Modal: React.FC<{
             Additional Info
             <textarea
               name="additionalInfo"
-              value={card.additionalInfo}
+              value={plant.additionalInfo}
               onChange={handleInputChange}
               className="mt-1 bg-white/50 p-2 border rounded"
               rows={2}
@@ -175,7 +179,7 @@ const Modal: React.FC<{
             <input
               type="number"
               name="waterRequirement"
-              value={card.waterRequirement}
+              value={plant.waterRequirement}
               onChange={handleInputChange}
               className="mt-1 bg-white/50 p-2 border rounded"
               min={1}
@@ -186,7 +190,7 @@ const Modal: React.FC<{
             <input
               type="number"
               name="sunRequirement"
-              value={card.sunRequirement}
+              value={plant.sunRequirement}
               onChange={handleInputChange}
               className="mt-1 bg-white/50 p-2 border rounded"
               min={1}
@@ -198,9 +202,9 @@ const Modal: React.FC<{
               type="date"
               name="lastTimeWatered"
               value={
-                card.lastTimeWatered &&
-                !isNaN(new Date(card.lastTimeWatered).getTime())
-                  ? new Date(card.lastTimeWatered).toISOString().split("T")[0]
+                plant.lastTimeWatered &&
+                !isNaN(new Date(plant.lastTimeWatered).getTime())
+                  ? new Date(plant.lastTimeWatered).toISOString().split("T")[0]
                   : new Date().toISOString().split("T")[0]
               }
               max={new Date().toISOString().split("T")[0]}
@@ -214,9 +218,9 @@ const Modal: React.FC<{
               type="date"
               name="lastTimeSunlit"
               value={
-                card.lastTimeSunlit &&
-                !isNaN(new Date(card.lastTimeSunlit).getTime())
-                  ? new Date(card.lastTimeSunlit).toISOString().split("T")[0]
+                plant.lastTimeSunlit &&
+                !isNaN(new Date(plant.lastTimeSunlit).getTime())
+                  ? new Date(plant.lastTimeSunlit).toISOString().split("T")[0]
                   : new Date().toISOString().split("T")[0]
               }
               max={new Date().toISOString().split("T")[0]}
@@ -229,7 +233,7 @@ const Modal: React.FC<{
             <input
               type="text"
               name="imageUrl"
-              value={card.imageUrl || ""}
+              value={plant.imageUrl || ""}
               onChange={handleInputChange}
               className="mt-1 bg-white/50 p-2 border rounded"
             />
@@ -239,7 +243,7 @@ const Modal: React.FC<{
             <input
               type="text"
               name="imageAlt"
-              value={card.imageAlt || ""}
+              value={plant.imageAlt || ""}
               onChange={handleInputChange}
               className="mt-1 bg-white/50 p-2 border rounded"
             />
@@ -273,19 +277,15 @@ const Modal: React.FC<{
 };
 
 export default function PlantsPage() {
-  const [allCards, setAllCards] = useState<EditableCardProps[]>([]);
+  const [allPlants, setAllPlants] = useState<EditablePlantDto[]>([]);
   const [loading, setLoading] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [startKey, setStartKey] = useState<string | null>(null);
 
   const CARDS_PER_LOAD = 5;
-
-  // Refs to hold mutable values for event listener closure without causing re-renders
   const loadingRef = useRef(loading);
   const hasMoreRef = useRef(hasMore);
   const startKeyRef = useRef(startKey);
-
-  // Update refs whenever the corresponding state changes
   useEffect(() => {
     loadingRef.current = loading;
   }, [loading]);
@@ -298,9 +298,7 @@ export default function PlantsPage() {
     startKeyRef.current = startKey;
   }, [startKey]);
 
-  // Make fetchCards a stable function using useCallback
-  // It now accepts the startKey as an argument for more explicit control
-  const fetchCards = useCallback(async (currentStartKey: string | null) => {
+  const fetchPlants = useCallback(async (currentStartKey: string | null) => {
     if (loadingRef.current || !hasMoreRef.current) {
       return;
     }
@@ -330,7 +328,10 @@ export default function PlantsPage() {
       const nextStartKey =
         newPlants.length > 0 ? newPlants[newPlants.length - 1].uuid : null;
 
-      setAllCards((prevCards) => [...prevCards, ...getInitialCards(newPlants)]);
+      setAllPlants((prevPlants) => [
+        ...prevPlants,
+        ...getInitialPlants(newPlants),
+      ]);
       setStartKey(nextStartKey);
       setHasMore(newPlants.length > 0);
     } catch (error) {
@@ -339,22 +340,21 @@ export default function PlantsPage() {
     } finally {
       setLoading(false);
     }
-  }, []); // Empty dependency array: fetchCards is now truly stable
+  }, []);
 
-  // --- Initial Load Effect (Runs strictly once per mount) ---
   const didFetch = useRef(false);
 
   useEffect(() => {
     if (didFetch.current) return;
     didFetch.current = true;
 
-    setAllCards([]);
+    setAllPlants([]);
     setLoading(false);
     setHasMore(true);
     setStartKey(null);
 
-    fetchCards(null);
-  }, [fetchCards]); // `fetchCards` is a stable reference, so this effect runs once on mount
+    fetchPlants(null);
+  }, [fetchPlants]); // `fetchPlants` is a stable reference, so this effect runs once on mount
 
   // --- Scroll Listener Effect (Sets up and tears down only once) ---
   useEffect(() => {
@@ -366,7 +366,7 @@ export default function PlantsPage() {
         hasMoreRef.current
       ) {
         // Subsequent fetches use the current startKey from the ref
-        fetchCards(startKeyRef.current);
+        fetchPlants(startKeyRef.current);
       }
     };
 
@@ -376,37 +376,82 @@ export default function PlantsPage() {
     return () => {
       window.removeEventListener("scroll", handleScroll);
     };
-  }, [fetchCards]); // `fetchCards` is a stable reference, so this effect runs only once for setup/cleanup
+  }, [fetchPlants]); // `fetchPlants` is a stable reference, so this effect runs only once for setup/cleanup
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
-  const [editingCard, setEditingCard] = useState<EditableCardProps | null>(
+  const [editingPlant, setEditingPlant] = useState<EditablePlantDto | null>(
     null,
   );
 
   const handleEdit = (index: number) => {
+    const plantToEdit = allPlants[index];
+    console.log("Editing plant:", plantToEdit);
     setEditingIndex(index);
-    setEditingCard({ ...allCards[index] });
+    setEditingPlant({ ...allPlants[index] });
     setModalOpen(true);
   };
 
   const handleModalClose = () => {
     setModalOpen(false);
     setEditingIndex(null);
-    setEditingCard(null);
+    setEditingPlant(null);
   };
 
-  const handleModalChange = (card: EditableCardProps) => {
-    setEditingCard(card);
+  const handleModalChange = (plant: EditablePlantDto) => {
+    setEditingPlant(plant);
   };
 
-  const handleModalConfirm = () => {
-    if (editingIndex !== null && editingCard) {
-      const updatedAllCards = [...allCards];
-      updatedAllCards[editingIndex] = editingCard;
-      setAllCards(updatedAllCards);
+  const handleModalConfirm = async () => {
+    if (editingIndex !== null && editingPlant) {
+      try {
+        setLoading(true);
+        // Prepare the payload with proper date formatting
+        const payload = {
+          command: "updatePlant",
+          payload: {
+            uuid: editingPlant.uuid,
+            zoneUuid: editingPlant.zoneUuid,
+            name: editingPlant.name,
+            additionalInfo: editingPlant.additionalInfo,
+            waterRequirement: editingPlant.waterRequirement,
+            sunRequirement: editingPlant.sunRequirement,
+            lastTimeWatered: new Date(
+              editingPlant.lastTimeWatered,
+            ).toISOString(),
+            lastTimeSunlit: new Date(editingPlant.lastTimeSunlit).toISOString(),
+            picture: editingPlant.imageUrl,
+          },
+        };
+
+        const response = await fetch(
+          "https://km5vtry5xcfu2xzboyytvu43i40vnzms.lambda-url.eu-central-1.on.aws/",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(payload),
+          },
+        );
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+          console.log(response.body);
+        }
+
+        // Update local state only after successful backend update
+        const updatedAllPlants = [...allPlants];
+        updatedAllPlants[editingIndex] = editingPlant;
+        setAllPlants(updatedAllPlants);
+
+        handleModalClose();
+      } catch (error) {
+        console.error("Failed to update plant:", error);
+      } finally {
+        setLoading(false);
+      }
     }
-    handleModalClose();
   };
 
   return (
@@ -415,8 +460,8 @@ export default function PlantsPage() {
         All the Plants
       </h2>
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-        {allCards.map((card, idx) => (
-          <Card key={idx} {...card} onEdit={handleEdit} index={idx} />
+        {allPlants.map((plant, idx) => (
+          <Plant key={idx} {...plant} onEdit={handleEdit} index={idx} />
         ))}
       </div>
       {loading && (
@@ -424,12 +469,12 @@ export default function PlantsPage() {
           Loading more plants...
         </div>
       )}
-      {!loading && !hasMore && allCards.length > 0 && (
+      {!loading && !hasMore && allPlants.length > 0 && (
         <div className="text-center text-gray-800 text-md mt-8 mb-4">
           You've seen all the plants!
         </div>
       )}
-      {allCards.length === 0 && !loading && !hasMore && (
+      {allPlants.length === 0 && !loading && !hasMore && (
         <div className="text-center text-gray-800 text-md mt-8 mb-4">
           No plants to display.
         </div>
@@ -438,7 +483,7 @@ export default function PlantsPage() {
       <Modal
         isOpen={modalOpen}
         onClose={handleModalClose}
-        card={editingCard}
+        plant={editingPlant}
         onChange={handleModalChange}
         onConfirm={handleModalConfirm}
       />
