@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { FaEdit } from "react-icons/fa";
+import { MdDelete, MdMenu } from "react-icons/md";
 
 interface PlantDto {
   uuid: string;
@@ -17,9 +18,14 @@ interface PlantDto {
 
 interface EditablePlantDto extends PlantDto {}
 
-const Plant: React.FC<
-  PlantDto & { onEdit: (index: number) => void; index: number }
-> = ({
+interface PlantProps extends PlantDto {
+  onEdit: (index: number) => void;
+  onDeleteSuccess: (uuid: string) => void;
+  index: number;
+}
+
+const Plant: React.FC<PlantProps> = ({
+  uuid,
   name,
   additionalInfo,
   lastTimeWatered,
@@ -29,10 +35,97 @@ const Plant: React.FC<
   imageUrl,
   imageAlt = "Plant image",
   onEdit,
+  onDeleteSuccess,
   index,
 }) => {
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  // Close menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setIsMenuOpen(false);
+      }
+    };
+
+    if (isMenuOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isMenuOpen]);
+
+  const handleDeleteClick = () => {
+    setIsMenuOpen(false);
+    setIsDeleteModalOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    setIsDeleting(true);
+    try {
+      const response = await fetch(
+        "https://km5vtry5xcfu2xzboyytvu43i40vnzms.lambda-url.eu-central-1.on.aws/",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            command: "deletePlant",
+            payload: { uuid: uuid },
+          }),
+        },
+      );
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      onDeleteSuccess(uuid);
+    } catch (error) {
+      console.error("Error deleting plant:", error);
+      alert("Failed to delete plant. Please try again.");
+    } finally {
+      setIsDeleting(false);
+      setIsDeleteModalOpen(false);
+    }
+  };
+
   return (
     <div className="bg-dirty-white rounded-xl shadow-lg overflow-hidden flex flex-col max-w-sm mx-auto my-4 transform transition-transform duration-300 hover:scale-105 hover:shadow-xl">
+      {/* Delete Confirmation Modal */}
+      {isDeleteModalOpen && (
+        <div className="fixed inset-0 bg-white/20 bg-opacity-20 flex items-center justify-center z-50">
+          <div className="bg-dirty-white p-6 rounded-lg max-w-sm w-full">
+            <h3 className="text-lg font-bold mb-4">Confirm Deletion</h3>
+            <p className="mb-6">
+              Are you sure you want to delete "{name}"? This action cannot be
+              undone.
+            </p>
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={() => setIsDeleteModalOpen(false)}
+                className="px-4 py-2 rounded bg-greenish-grey hover:bg-greenish-grey-darker hover:cusror-pointer"
+                disabled={isDeleting}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmDelete}
+                className="px-4 py-2 bg-coral rounded text-gray-800 hover:bg-coral-dark"
+                disabled={isDeleting}
+              >
+                {isDeleting ? "Deleting..." : "Delete"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {imageUrl && (
         <div className="relative h-48 w-full">
           <img
@@ -48,10 +141,40 @@ const Plant: React.FC<
 
       <div className="p-6 flex flex-col flex-grow relative">
         <h3 className="text-xl font-bold text-gray-900 text-center">{name}</h3>
-        <FaEdit
-          className="absolute top-6 right-6 hover:cursor-pointer"
-          onClick={() => onEdit(index)}
-        ></FaEdit>
+
+        {/* Menu Button and Dropdown */}
+        <div className="absolute top-6 right-6" ref={menuRef}>
+          <button
+            onClick={() => setIsMenuOpen(!isMenuOpen)}
+            className="hover:cursor-pointer focus:outline-none"
+            aria-label="Toggle menu"
+          >
+            <MdMenu className="text-xl" />
+          </button>
+
+          {isMenuOpen && (
+            <div className="absolute right-0 mt-2 w-48 bg-dirty-white rounded-md shadow-lg z-10 border border-white/50">
+              <div className="py-1">
+                <button
+                  className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-darker-dirty-white w-full text-left"
+                  onClick={() => {
+                    setIsMenuOpen(false);
+                    onEdit(index);
+                  }}
+                >
+                  <FaEdit className="mr-2" /> Edit
+                </button>
+                <button
+                  className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-darker-dirty-white w-full text-left"
+                  onClick={handleDeleteClick}
+                >
+                  <MdDelete className="mr-2" /> Delete
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
         <p className="text-gray-700 text-base flex-grow mb-4">
           {additionalInfo}
         </p>
@@ -454,6 +577,10 @@ export default function PlantsPage() {
     }
   };
 
+  const handleDeleteSuccess = (deletedPlantId: string) => {
+    setAllPlants(allPlants.filter((plant) => plant.uuid !== deletedPlantId));
+  };
+
   return (
     <main className="flex-1 p-8 min-h-screen font-sans">
       <h2 className="text-3xl font-bold text-gray-800 mb-6 text-center">
@@ -461,7 +588,13 @@ export default function PlantsPage() {
       </h2>
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
         {allPlants.map((plant, idx) => (
-          <Plant key={idx} {...plant} onEdit={handleEdit} index={idx} />
+          <Plant
+            key={idx}
+            {...plant}
+            onEdit={handleEdit}
+            index={idx}
+            onDeleteSuccess={handleDeleteSuccess}
+          />
         ))}
       </div>
       {loading && (
