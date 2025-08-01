@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { FaEdit } from "react-icons/fa";
-import { MdDelete, MdMenu } from "react-icons/md";
+import { MdDelete, MdMenu, MdAdd } from "react-icons/md";
 
 interface PlantDto {
   uuid: string;
@@ -43,7 +43,6 @@ const Plant: React.FC<PlantProps> = ({
   const [isDeleting, setIsDeleting] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  // Close menu when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
@@ -97,10 +96,9 @@ const Plant: React.FC<PlantProps> = ({
 
   return (
     <div className="bg-dirty-white rounded-xl shadow-lg overflow-hidden flex flex-col max-w-sm mx-auto my-4 transform transition-transform duration-300 hover:scale-105 hover:shadow-xl">
-      {/* Delete Confirmation Modal */}
       {isDeleteModalOpen && (
-        <div className="fixed inset-0 bg-white/20 bg-opacity-20 flex items-center justify-center z-50">
-          <div className="bg-dirty-white p-6 rounded-lg max-w-sm w-full">
+        <div className="fixed inset-0 bg-white/30 flex items-center justify-center z-50">
+          <div className="bg-dirty-white p-6 rounded-lg max-w-sm w-full mx-4">
             <h3 className="text-lg font-bold mb-4">Confirm Deletion</h3>
             <p className="mb-6">
               Are you sure you want to delete "{name}"? This action cannot be
@@ -109,14 +107,14 @@ const Plant: React.FC<PlantProps> = ({
             <div className="flex justify-end space-x-3">
               <button
                 onClick={() => setIsDeleteModalOpen(false)}
-                className="px-4 py-2 rounded bg-greenish-grey hover:bg-greenish-grey-darker hover:cusror-pointer"
+                className="px-4 py-2 rounded hover:bg-greenish-grey-darker bg-greenish-grey"
                 disabled={isDeleting}
               >
                 Cancel
               </button>
               <button
                 onClick={handleConfirmDelete}
-                className="px-4 py-2 bg-coral rounded text-gray-800 hover:bg-coral-dark"
+                className="px-4 py-2 bg-coral text-gray-800 rounded hover:bg-coral-warning"
                 disabled={isDeleting}
               >
                 {isDeleting ? "Deleting..." : "Delete"}
@@ -142,7 +140,6 @@ const Plant: React.FC<PlantProps> = ({
       <div className="p-6 flex flex-col flex-grow relative">
         <h3 className="text-xl font-bold text-gray-900 text-center">{name}</h3>
 
-        {/* Menu Button and Dropdown */}
         <div className="absolute top-6 right-6" ref={menuRef}>
           <button
             onClick={() => setIsMenuOpen(!isMenuOpen)}
@@ -195,30 +192,14 @@ const Plant: React.FC<PlantProps> = ({
   );
 };
 
-const defaultImageUrl = (name: string) =>
-  `https://placehold.co/400x200/black/ffffff?text=${encodeURIComponent(name)}`;
-
-const getInitialPlants = (plants: any[]): EditablePlantDto[] =>
-  plants.map((plant) => ({
-    uuid: plant.uuid,
-    name: plant.name,
-    zoneUuid: plant.zoneUuid,
-    additionalInfo: plant.additionalInfo,
-    waterRequirement: plant.waterRequirement,
-    sunRequirement: plant.sunRequirement,
-    lastTimeWatered: new Date(plant.lastTimeWatered).toDateString(),
-    lastTimeSunlit: new Date(plant.lastTimeSunlit).toDateString(),
-    imageUrl: plant.picture || defaultImageUrl(plant.name),
-    imageAlt: plant.name,
-  }));
-
 const Modal: React.FC<{
   isOpen: boolean;
   onClose: () => void;
   plant: EditablePlantDto | null;
   onChange: (plant: EditablePlantDto) => void;
   onConfirm: () => void;
-}> = ({ isOpen, onClose, plant, onChange, onConfirm }) => {
+  isCreating?: boolean;
+}> = ({ isOpen, onClose, plant, onChange, onConfirm, isCreating = false }) => {
   const [showModalContent, setShowModalContent] = useState(false);
 
   useEffect(() => {
@@ -250,9 +231,7 @@ const Modal: React.FC<{
   return (
     <div
       onClick={onClose}
-      className={`
-        fixed inset-0 z-50 flex items-center justify-center p-4
-      `}
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
     >
       <div
         className="absolute inset-0 backdrop-blur-sm bg-black/30"
@@ -260,14 +239,12 @@ const Modal: React.FC<{
       />
       <div
         onClick={(e) => e.stopPropagation()}
-        className={`
-          relative bg-dirty-white rounded-lg p-6 shadow-xl max-w-xl w-full z-10
+        className={`relative bg-dirty-white rounded-lg p-6 shadow-xl max-w-xl w-full z-10
           transform transition-all duration-300 ease-out
-          ${showModalContent ? "scale-100 opacity-100" : "scale-95 opacity-0"}
-        `}
+          ${showModalContent ? "scale-100 opacity-100" : "scale-95 opacity-0"}`}
       >
         <h2 className="text-xl font-bold mb-4 text-gray-900">
-          Updating Plant Data
+          {isCreating ? "Create New Plant" : "Updating Plant Data"}
         </h2>
         <form
           className="flex flex-col gap-3"
@@ -306,6 +283,7 @@ const Modal: React.FC<{
               onChange={handleInputChange}
               className="mt-1 bg-white/50 p-2 border rounded"
               min={1}
+              required
             />
           </label>
           <label className="flex flex-col text-left text-gray-700 font-medium">
@@ -317,6 +295,7 @@ const Modal: React.FC<{
               onChange={handleInputChange}
               className="mt-1 bg-white/50 p-2 border rounded"
               min={1}
+              required
             />
           </label>
           <label className="flex flex-col text-left text-gray-700 font-medium">
@@ -333,6 +312,7 @@ const Modal: React.FC<{
               max={new Date().toISOString().split("T")[0]}
               onChange={handleInputChange}
               className="mt-1 bg-white/50 p-2 border rounded"
+              required
             />
           </label>
           <label className="flex flex-col text-left text-gray-700 font-medium">
@@ -349,6 +329,7 @@ const Modal: React.FC<{
               max={new Date().toISOString().split("T")[0]}
               onChange={handleInputChange}
               className="mt-1 bg-white/50 p-2 border rounded"
+              required
             />
           </label>
           <label className="flex flex-col text-left text-gray-700 font-medium">
@@ -383,7 +364,7 @@ const Modal: React.FC<{
               type="submit"
               className="px-4 py-2 bg-greenish-grey text-gray-800 rounded hover:bg-greenish-grey-darker focus:outline-none"
             >
-              Confirm
+              {isCreating ? "Create" : "Update"}
             </button>
           </div>
         </form>
@@ -404,11 +385,18 @@ export default function PlantsPage() {
   const [loading, setLoading] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [startKey, setStartKey] = useState<string | null>(null);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  const [editingPlant, setEditingPlant] = useState<EditablePlantDto | null>(
+    null,
+  );
+  const [isCreating, setIsCreating] = useState(false);
 
   const CARDS_PER_LOAD = 5;
   const loadingRef = useRef(loading);
   const hasMoreRef = useRef(hasMore);
   const startKeyRef = useRef(startKey);
+
   useEffect(() => {
     loadingRef.current = loading;
   }, [loading]);
@@ -422,9 +410,7 @@ export default function PlantsPage() {
   }, [startKey]);
 
   const fetchPlants = useCallback(async (currentStartKey: string | null) => {
-    if (loadingRef.current || !hasMoreRef.current) {
-      return;
-    }
+    if (loadingRef.current || !hasMoreRef.current) return;
 
     setLoading(true);
     try {
@@ -442,18 +428,30 @@ export default function PlantsPage() {
         },
       );
 
-      if (!response.ok) {
+      if (!response.ok)
         throw new Error(`HTTP error! status: ${response.status}`);
-      }
 
       const outerData = await response.json();
       const newPlants = outerData.data.data;
       const nextStartKey =
         newPlants.length > 0 ? newPlants[newPlants.length - 1].uuid : null;
 
-      setAllPlants((prevPlants) => [
-        ...prevPlants,
-        ...getInitialPlants(newPlants),
+      setAllPlants((prev) => [
+        ...prev,
+        ...newPlants.map((p: any) => ({
+          uuid: p.uuid,
+          name: p.name,
+          zoneUuid: p.zoneUuid,
+          additionalInfo: p.additionalInfo,
+          waterRequirement: p.waterRequirement,
+          sunRequirement: p.sunRequirement,
+          lastTimeWatered: new Date(p.lastTimeWatered).toDateString(),
+          lastTimeSunlit: new Date(p.lastTimeSunlit).toDateString(),
+          imageUrl:
+            p.picture ||
+            `https://placehold.co/400x200/black/ffffff?text=${encodeURIComponent(p.name)}`,
+          imageAlt: p.name,
+        })),
       ]);
       setStartKey(nextStartKey);
       setHasMore(newPlants.length > 0);
@@ -470,16 +468,9 @@ export default function PlantsPage() {
   useEffect(() => {
     if (didFetch.current) return;
     didFetch.current = true;
-
-    setAllPlants([]);
-    setLoading(false);
-    setHasMore(true);
-    setStartKey(null);
-
     fetchPlants(null);
-  }, [fetchPlants]); // `fetchPlants` is a stable reference, so this effect runs once on mount
+  }, [fetchPlants]);
 
-  // --- Scroll Listener Effect (Sets up and tears down only once) ---
   useEffect(() => {
     const handleScroll = () => {
       if (
@@ -488,30 +479,36 @@ export default function PlantsPage() {
         !loadingRef.current &&
         hasMoreRef.current
       ) {
-        // Subsequent fetches use the current startKey from the ref
         fetchPlants(startKeyRef.current);
       }
     };
 
     window.addEventListener("scroll", handleScroll);
-
-    // Cleanup function: This runs when the component unmounts
-    return () => {
-      window.removeEventListener("scroll", handleScroll);
-    };
-  }, [fetchPlants]); // `fetchPlants` is a stable reference, so this effect runs only once for setup/cleanup
-
-  const [modalOpen, setModalOpen] = useState(false);
-  const [editingIndex, setEditingIndex] = useState<number | null>(null);
-  const [editingPlant, setEditingPlant] = useState<EditablePlantDto | null>(
-    null,
-  );
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, [fetchPlants]);
 
   const handleEdit = (index: number) => {
-    const plantToEdit = allPlants[index];
-    console.log("Editing plant:", plantToEdit);
     setEditingIndex(index);
     setEditingPlant({ ...allPlants[index] });
+    setIsCreating(false);
+    setModalOpen(true);
+  };
+
+  const handleCreateClick = () => {
+    setEditingIndex(null);
+    setEditingPlant({
+      uuid: "",
+      name: "",
+      additionalInfo: "",
+      waterRequirement: 7,
+      sunRequirement: 7,
+      lastTimeWatered: new Date().toDateString(),
+      lastTimeSunlit: new Date().toDateString(),
+      imageUrl: "",
+      imageAlt: "Plant image",
+      zoneUuid: "",
+    });
+    setIsCreating(true);
     setModalOpen(true);
   };
 
@@ -519,6 +516,7 @@ export default function PlantsPage() {
     setModalOpen(false);
     setEditingIndex(null);
     setEditingPlant(null);
+    setIsCreating(false);
   };
 
   const handleModalChange = (plant: EditablePlantDto) => {
@@ -526,54 +524,56 @@ export default function PlantsPage() {
   };
 
   const handleModalConfirm = async () => {
-    if (editingIndex !== null && editingPlant) {
-      try {
-        setLoading(true);
-        // Prepare the payload with proper date formatting
-        const payload = {
-          command: "updatePlant",
-          payload: {
-            uuid: editingPlant.uuid,
-            zoneUuid: editingPlant.zoneUuid,
-            name: editingPlant.name,
-            additionalInfo: editingPlant.additionalInfo,
-            waterRequirement: editingPlant.waterRequirement,
-            sunRequirement: editingPlant.sunRequirement,
-            lastTimeWatered: new Date(
-              editingPlant.lastTimeWatered,
-            ).toISOString(),
-            lastTimeSunlit: new Date(editingPlant.lastTimeSunlit).toISOString(),
-            picture: editingPlant.imageUrl,
+    if (!editingPlant) return;
+
+    try {
+      setLoading(true);
+      const payload = {
+        command: isCreating ? "createPlant" : "updatePlant",
+        payload: {
+          ...(isCreating ? {} : { uuid: editingPlant.uuid }),
+          ...(editingPlant.zoneUuid === ""
+            ? {}
+            : { zoneUuid: editingPlant.zoneUuid }),
+          name: editingPlant.name,
+          additionalInfo: editingPlant.additionalInfo,
+          waterRequirement: editingPlant.waterRequirement,
+          sunRequirement: editingPlant.sunRequirement,
+          lastTimeWatered: new Date(editingPlant.lastTimeWatered).toISOString(),
+          lastTimeSunlit: new Date(editingPlant.lastTimeSunlit).toISOString(),
+          picture: editingPlant.imageUrl,
+        },
+      };
+
+      const response = await fetch(
+        "https://km5vtry5xcfu2xzboyytvu43i40vnzms.lambda-url.eu-central-1.on.aws/",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
           },
-        };
+          body: JSON.stringify(payload),
+        },
+      );
 
-        const response = await fetch(
-          "https://km5vtry5xcfu2xzboyytvu43i40vnzms.lambda-url.eu-central-1.on.aws/",
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify(payload),
-          },
-        );
+      if (!response.ok)
+        throw new Error(`HTTP error! status: ${response.status}`);
 
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-          console.log(response.body);
-        }
-
-        // Update local state only after successful backend update
-        const updatedAllPlants = [...allPlants];
-        updatedAllPlants[editingIndex] = editingPlant;
-        setAllPlants(updatedAllPlants);
-
+      if (isCreating) {
+        window.location.reload(); // Refresh page after creation
+      } else if (editingIndex !== null) {
+        const updated = [...allPlants];
+        updated[editingIndex] = editingPlant;
+        setAllPlants(updated);
         handleModalClose();
-      } catch (error) {
-        console.error("Failed to update plant:", error);
-      } finally {
-        setLoading(false);
       }
+    } catch (error) {
+      console.error(
+        `Failed to ${isCreating ? "create" : "update"} plant:`,
+        error,
+      );
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -583,13 +583,20 @@ export default function PlantsPage() {
 
   return (
     <main className="flex-1 p-8 min-h-screen font-sans">
-      <h2 className="text-3xl font-bold text-gray-800 mb-6 text-center">
-        All the Plants
-      </h2>
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-3xl font-bold text-gray-800">All the Plants</h2>
+        <button
+          onClick={handleCreateClick}
+          className="flex items-center gap-2 px-4 py-2 bg-greenish-grey text-gray-800 rounded hover:bg-greenish-grey-darker focus:outline-none"
+        >
+          <MdAdd /> Create New Plant
+        </button>
+      </div>
+
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
         {allPlants.map((plant, idx) => (
           <Plant
-            key={idx}
+            key={plant.uuid}
             {...plant}
             onEdit={handleEdit}
             index={idx}
@@ -597,16 +604,19 @@ export default function PlantsPage() {
           />
         ))}
       </div>
+
       {loading && (
         <div className="text-center text-gray-800 text-lg mt-8 mb-4">
           Loading more plants...
         </div>
       )}
+
       {!loading && !hasMore && allPlants.length > 0 && (
         <div className="text-center text-gray-800 text-md mt-8 mb-4">
           You've seen all the plants!
         </div>
       )}
+
       {allPlants.length === 0 && !loading && !hasMore && (
         <div className="text-center text-gray-800 text-md mt-8 mb-4">
           No plants to display.
@@ -619,6 +629,7 @@ export default function PlantsPage() {
         plant={editingPlant}
         onChange={handleModalChange}
         onConfirm={handleModalConfirm}
+        isCreating={isCreating}
       />
     </main>
   );
