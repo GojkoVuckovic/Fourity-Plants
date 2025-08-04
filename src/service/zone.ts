@@ -51,6 +51,13 @@ export type CreateZoneDTO = z.infer<typeof ZoneDataSchema>;
 export type ZoneDatabase = z.infer<typeof ZoneSchema>;
 export type Zone = z.infer<typeof ZoneDtoSchema>;
 
+export type ZoneDTO = {
+  uuid: string;
+  name: string;
+  employees: string[];
+  plantUuid: string[];
+};
+
 export const ZoneService = (db: DynamoDBDocumentClient) => {
   return {
     async getZone(
@@ -265,10 +272,10 @@ export const ZoneService = (db: DynamoDBDocumentClient) => {
     },
     async getZoneList(
       req: GetZoneListRequest,
-    ): Promise<RequestResult<"getZoneList", ListResponse<Array<Zone>>>> {
+    ): Promise<RequestResult<"getZoneList", ListResponse<Array<ZoneDTO>>>> {
       const getZoneListCommand = async (): Promise<QueryResult> => {
         const { Items, LastEvaluatedKey } = await db.send(
-          createQueryCommand(req.payload, "PLANT_TYPE"),
+          createQueryCommand(req.payload, "ZONE"),
         );
         return { Items, LastEvaluatedKey };
       };
@@ -280,8 +287,46 @@ export const ZoneService = (db: DynamoDBDocumentClient) => {
       const parsedData = getZoneListResult.data.Items;
       const parseResult = parseData(parsedData, req.command, ZoneArraySchema);
       if (!parseResult.success) return parseResult;
+      const zones: Array<ZoneDTO> = [];
+      for (const zone of parseResult.data) {
+        const getZoneUuidListCommand = async () => {
+          const { Items } = await db.send(
+            new QueryCommand({
+              TableName: TABLE_NAME,
+              IndexName: "GSIndex",
+              KeyConditionExpression: "GSI = :uuidValue",
+              ExpressionAttributeValues: {
+                ":uuidValue": zone.uuid,
+              },
+            }),
+          );
+          return Items;
+        };
+        const getZoneUuidListResult = await processRequest(
+          getZoneUuidListCommand,
+          "getZoneList",
+        );
+        if (!getZoneUuidListResult.success) {
+          return getZoneUuidListResult;
+        }
+        const zoneUuidData = getZoneUuidListResult.data;
+        const zoneUiidListResult = parseData(
+          zoneUuidData,
+          "getZoneList",
+          PlantArraySchema,
+        );
+        if (!zoneUiidListResult.success) {
+          return zoneUiidListResult;
+        }
+        const plantList = zoneUiidListResult.data;
+        const plantUuid = plantList.map((plant) => plant.SK);
+        zones.push({
+          ...zone,
+          plantUuid,
+        });
+      }
       const listResponse = createListResponse(
-        parseResult.data,
+        zones,
         getZoneListResult.data.LastEvaluatedKey,
       );
       return createRequestSuccess(req.command)(listResponse, 200, "");

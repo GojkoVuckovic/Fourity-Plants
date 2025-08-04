@@ -4,9 +4,9 @@ import { FaEdit } from "react-icons/fa";
 import { FaDeleteLeft } from "react-icons/fa6";
 
 interface ZoneData {
-  id: string;
+  uuid: string;
   name: string;
-  employeeNames: string[];
+  employees: string[];
   plantUuid: string[];
 }
 
@@ -16,6 +16,8 @@ interface ZoneCardProps {
   onCancel: () => void;
   isEditing: boolean;
   setIsEditing: (editing: boolean) => void;
+  isLoading: boolean;
+  onChange: (updatedData: ZoneData) => void;
 }
 
 export const ZoneCard: React.FC<ZoneCardProps> = ({
@@ -24,40 +26,47 @@ export const ZoneCard: React.FC<ZoneCardProps> = ({
   onCancel,
   isEditing,
   setIsEditing,
+  onChange,
 }) => {
-  const [zoneData, setZoneData] = useState<ZoneData>(initialData);
-
+  const [localData, setLocalData] = useState<ZoneData>(initialData);
   useEffect(() => {
-    setZoneData(initialData);
+    setLocalData(initialData);
   }, [initialData]);
 
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setZoneData({ ...zoneData, name: e.target.value });
+    setLocalData({ ...localData, name: e.target.value });
+    onChange({ ...localData, name: e.target.value });
   };
 
   const removeEmployee = (index: number) => {
-    const updatedData = {
-      ...zoneData,
-      employeeNames: zoneData.employeeNames.filter((_, i) => i !== index),
-    };
-    setZoneData(updatedData);
+    setLocalData((prevData) => {
+      const updatedData = {
+        ...prevData,
+        employees: prevData.employees.filter((_, i) => i !== index),
+      };
+      onChange(updatedData);
+      return updatedData;
+    });
   };
 
   const removePlant = (index: number) => {
-    const updatedData = {
-      ...zoneData,
-      plantUuid: zoneData.plantUuid.filter((_, i) => i !== index),
-    };
-    setZoneData(updatedData);
+    setLocalData((prevData) => {
+      const updatedData = {
+        ...prevData,
+        plantUuid: prevData.plantUuid.filter((_, i) => i !== index),
+      };
+      onChange(updatedData);
+      return updatedData;
+    });
   };
 
   const handleSave = () => {
-    onSave(zoneData);
+    onSave(localData);
     setIsEditing(false);
   };
 
   const handleCancel = () => {
-    setZoneData(initialData);
+    setLocalData(initialData);
     setIsEditing(false);
     onCancel();
   };
@@ -80,7 +89,7 @@ export const ZoneCard: React.FC<ZoneCardProps> = ({
         <input
           id="zone-name"
           type="text"
-          value={zoneData.name}
+          value={localData.name}
           onChange={handleNameChange}
           disabled={!isEditing}
           className={`shadow  bg-white/50 appearance-none rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline ${
@@ -92,8 +101,8 @@ export const ZoneCard: React.FC<ZoneCardProps> = ({
       <div className="mb-6">
         <h3 className="text-lg font-semibold mb-3">Employees</h3>
         <div className="space-y-2">
-          {zoneData.employeeNames.length > 0 ? (
-            zoneData.employeeNames.map((name, index) => (
+          {localData.employees.length > 0 ? (
+            localData.employees.map((name, index) => (
               <div
                 key={`${name}-${index}`}
                 className="flex items-center justify-between bg-white/50 p-2 rounded"
@@ -116,8 +125,8 @@ export const ZoneCard: React.FC<ZoneCardProps> = ({
       <div className="mb-6">
         <h3 className="text-lg font-semibold mb-3">Plants</h3>
         <div className="space-y-2">
-          {zoneData.plantUuid.length > 0 ? (
-            zoneData.plantUuid.map((uuid, index) => (
+          {localData.plantUuid.length > 0 ? (
+            localData.plantUuid.map((uuid, index) => (
               <div
                 key={`${uuid}-${index}`}
                 className="flex items-center justify-between bg-white/50 p-2 rounded"

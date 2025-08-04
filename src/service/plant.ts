@@ -11,6 +11,7 @@ import {
   PutCommand,
   DeleteCommand,
   DynamoDBDocumentClient,
+  QueryCommand,
 } from "@aws-sdk/lib-dynamodb";
 import { createRequestSuccess, RequestResult } from "../requests";
 import {
@@ -21,6 +22,7 @@ import {
   GetPlantListRequest,
   ListResponse,
   QueryResult,
+  GetPlantListWithNoZoneRequest,
 } from "../types";
 
 import { v4 as uuidv4 } from "uuid";
@@ -89,6 +91,7 @@ export const plantService = (db: DynamoDBDocumentClient) => {
       req: CreatePlantRequest,
     ): Promise<RequestResult<"createPlant", CreatePlantDTO>> {
       if (req.payload.zoneUuid) {
+        console.log("Sto udje ovde");
         const getZoneCommand = async () => {
           const { Item } = await db.send(
             new GetCommand({
@@ -116,7 +119,7 @@ export const plantService = (db: DynamoDBDocumentClient) => {
         PK: `PLANT#${plantUuid}`,
         SK: plantUuid,
         type: "PLANT",
-        GSI: parserResult.data.zoneUuid || "",
+        GSI: parserResult.data.zoneUuid || "No zone",
         GSI2: plantUuid,
         data: {
           name: parserResult.data.name,
@@ -288,6 +291,46 @@ export const plantService = (db: DynamoDBDocumentClient) => {
         getPlantListResult.data.LastEvaluatedKey,
       );
       return createRequestSuccess(req.command)(listResponse, 200, "");
+    },
+    async getPlantListWithNoZone(
+      req: GetPlantListWithNoZoneRequest,
+    ): Promise<RequestResult<"getPlantListWithNoZone", Array<Plant>>> {
+      const getPlantListCommand = async () => {
+        const { Items } = await db.send(
+          new QueryCommand({
+            TableName: TABLE_NAME,
+            IndexName: "TypeIndex",
+            KeyConditionExpression: "#typeAttr = :typeValue",
+            ExpressionAttributeNames: {
+              "#typeAttr": "type",
+            },
+            ExpressionAttributeValues: {
+              ":typeValue": "PLANT",
+            },
+          }),
+        );
+        return Items;
+      };
+      const getPlantListResult = await processRequest(
+        getPlantListCommand,
+        "getPlantListWithNoZone",
+      );
+      if (!getPlantListResult.success) {
+        return getPlantListResult;
+      }
+      const zoneUuidData = getPlantListResult.data;
+      const plantListResult = parseData(
+        zoneUuidData,
+        "getPlantListWithNoZone",
+        PlantDtoArraySchema,
+      );
+      if (!plantListResult.success) {
+        return plantListResult;
+      }
+      const plantListWithNoZone = plantListResult.data.filter(
+        (plant) => !plant.zoneUuid || plant.zoneUuid === "No zone",
+      );
+      return createRequestSuccess(req.command)(plantListWithNoZone, 200, "");
     },
   };
 };

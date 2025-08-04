@@ -47,6 +47,8 @@ export const ProcessRequest = async (data: Req) => {
       return plantServiceInstance.getPlant(data);
     case "getPlantList":
       return plantServiceInstance.getPlantList({ ...data, ...paginationData });
+    case "getPlantListWithNoZone":
+      return plantServiceInstance.getPlantListWithNoZone(data);
     case "createZone":
       return zoneServiceInstance.createZone(data);
     case "updateZone":
