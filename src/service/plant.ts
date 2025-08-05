@@ -91,7 +91,6 @@ export const plantService = (db: DynamoDBDocumentClient) => {
       req: CreatePlantRequest,
     ): Promise<RequestResult<"createPlant", CreatePlantDTO>> {
       if (req.payload.zoneUuid) {
-        console.log("Sto udje ovde");
         const getZoneCommand = async () => {
           const { Item } = await db.send(
             new GetCommand({
@@ -119,11 +118,14 @@ export const plantService = (db: DynamoDBDocumentClient) => {
         PK: `PLANT#${plantUuid}`,
         SK: plantUuid,
         type: "PLANT",
-        GSI: parserResult.data.zoneUuid || "No zone",
+        GSI:
+          parserResult.data.zoneUuid || "00000000-0000-0000-0000-000000000001",
         GSI2: plantUuid,
         data: {
           name: parserResult.data.name,
-          zoneUuid: parserResult.data.zoneUuid,
+          zoneUuid:
+            parserResult.data.zoneUuid ||
+            "00000000-0000-0000-0000-000000000001",
           additionalInfo: parserResult.data.additionalInfo,
           waterRequirement: parserResult.data.waterRequirement,
           sunRequirement: parserResult.data.sunRequirement,
@@ -197,7 +199,7 @@ export const plantService = (db: DynamoDBDocumentClient) => {
         PK: `PLANT#${req.payload.uuid}`,
         SK: req.payload.uuid,
         type: "PLANT",
-        GSI: req.payload.zoneUuid || "",
+        GSI: req.payload.zoneUuid || "No zone",
         GSI2: req.payload.uuid,
         data: {
           name: req.payload.name,
@@ -327,8 +329,11 @@ export const plantService = (db: DynamoDBDocumentClient) => {
       if (!plantListResult.success) {
         return plantListResult;
       }
+      console.log(plantListResult);
       const plantListWithNoZone = plantListResult.data.filter(
-        (plant) => !plant.zoneUuid || plant.zoneUuid === "No zone",
+        (plant) =>
+          !plant.zoneUuid ||
+          plant.zoneUuid === "00000000-0000-0000-0000-000000000001",
       );
       return createRequestSuccess(req.command)(plantListWithNoZone, 200, "");
     },

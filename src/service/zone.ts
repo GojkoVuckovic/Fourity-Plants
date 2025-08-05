@@ -23,13 +23,16 @@ import {
   ListResponse,
   QueryResult,
 } from "../types";
-import { PlantArraySchema } from "./plant";
+import { PlantArraySchema, PlantDatabase, PlantSchema } from "./plant";
 import { v4 as uuidv4 } from "uuid";
 import { z } from "zod";
 
 export const ZoneDataSchema = z.object({
   employees: z.array(z.string().min(1)),
   name: z.string().min(1),
+});
+export const CreateZoneDataSchema = ZoneDataSchema.extend({
+  plantUuid: z.array(z.string().uuid()),
 });
 
 export const ZoneSchema = BaseItemSchema.extend({
@@ -45,18 +48,16 @@ export const ZoneDtoSchema = ZoneSchema.transform((zoneEntry) => {
   };
 });
 
+export const UpdateZoneDtoSchema = CreateZoneDataSchema.extend({
+  uuid: z.string().uuid(),
+});
+
 export const ZoneArraySchema = z.array(ZoneDtoSchema);
 
-export type CreateZoneDTO = z.infer<typeof ZoneDataSchema>;
+export type CreateZoneDTO = z.infer<typeof CreateZoneDataSchema>;
 export type ZoneDatabase = z.infer<typeof ZoneSchema>;
 export type Zone = z.infer<typeof ZoneDtoSchema>;
-
-export type ZoneDTO = {
-  uuid: string;
-  name: string;
-  employees: string[];
-  plantUuid: string[];
-};
+export type ZoneDTO = z.infer<typeof UpdateZoneDtoSchema>;
 
 export const ZoneService = (db: DynamoDBDocumentClient) => {
   return {
@@ -89,7 +90,7 @@ export const ZoneService = (db: DynamoDBDocumentClient) => {
       req: CreateZoneRequest,
     ): Promise<RequestResult<"createZone", CreateZoneDTO>> {
       const item = req.payload;
-      const parserResult = parseData(item, "createZone", ZoneDataSchema);
+      const parserResult = parseData(item, "createZone", CreateZoneDataSchema);
       if (!parserResult.success) {
         return parserResult;
       }
@@ -119,6 +120,57 @@ export const ZoneService = (db: DynamoDBDocumentClient) => {
       if (!createZoneResult.success) {
         return createZoneResult;
       }
+      for (const plantUuid of parserResult.data.plantUuid) {
+        const getPlantCommand = async () => {
+          const { Item } = await db.send(
+            new GetCommand({
+              TableName: TABLE_NAME,
+              Key: {
+                PK: `PLANT#${plantUuid}`,
+                SK: plantUuid,
+              },
+            }),
+          );
+          return Item;
+        };
+
+        const getPlantResult = await processRequest(
+          getPlantCommand,
+          req.command,
+        );
+
+        if (!getPlantResult.success) {
+          return getPlantResult;
+        }
+
+        const result = getPlantResult.data;
+        const parserResult = parseData(result, req.command, PlantSchema);
+        if (!parserResult.success) {
+          return parserResult;
+        }
+        const newPlant: PlantDatabase = {
+          ...parserResult.data,
+          GSI: zoneUuid,
+          data: {
+            ...parserResult.data.data,
+            zoneUuid: zoneUuid,
+          },
+        };
+        const createPlantCommand = async () =>
+          await db.send(
+            new PutCommand({
+              TableName: TABLE_NAME,
+              Item: newPlant,
+            }),
+          );
+        const createPlantResult = await processRequest(
+          createPlantCommand,
+          req.command,
+        );
+        if (!createPlantResult.success) {
+          return createPlantResult;
+        }
+      }
       return createRequestSuccess("createZone")(
         parserResult.data,
         createZoneResult.code,
@@ -145,10 +197,12 @@ export const ZoneService = (db: DynamoDBDocumentClient) => {
         return getZoneResult;
       }
       const item = req.payload;
-      const parserResult = parseData(item, "updateZone", ZoneDtoSchema);
+      const parserResult = parseData(item, "updateZone", UpdateZoneDtoSchema);
       if (!parserResult.success) {
         return parserResult;
       }
+      const zoneUuid = parserResult.data.uuid;
+      const updatedPlantList = parserResult.data.plantUuid;
       const zoneDatabase: ZoneDatabase = {
         PK: `ZONE#${parserResult.data.uuid}`,
         SK: parserResult.data.uuid,
@@ -173,6 +227,116 @@ export const ZoneService = (db: DynamoDBDocumentClient) => {
       );
       if (!updateZoneResult.success) {
         return updateZoneResult;
+      }
+      const getZoneUuidListCommand = async () => {
+        const { Items } = await db.send(
+          new QueryCommand({
+            TableName: TABLE_NAME,
+            IndexName: "GSIndex",
+            KeyConditionExpression: "GSI = :uuidValue",
+            ExpressionAttributeValues: {
+              ":uuidValue": req.payload.uuid,
+            },
+          }),
+        );
+        return Items;
+      };
+      const getZoneUuidListResult = await processRequest(
+        getZoneUuidListCommand,
+        req.command,
+      );
+      if (!getZoneUuidListResult.success) {
+        return getZoneUuidListResult;
+      }
+      const zoneUuidData = getZoneUuidListResult.data;
+      const zoneUiidListResult = parseData(
+        zoneUuidData,
+        req.command,
+        PlantArraySchema,
+      );
+      if (!zoneUiidListResult.success) {
+        return zoneUiidListResult;
+      }
+      const plantList = zoneUiidListResult.data;
+      for (const plant of plantList) {
+        if (!(plant.SK in updatedPlantList)) {
+          const updatedPlant: PlantDatabase = {
+            ...plant,
+            GSI: "00000000-0000-0000-0000-000000000001",
+            data: {
+              ...plant.data,
+              zoneUuid: "00000000-0000-0000-0000-000000000001",
+            },
+          };
+          const updatePlantCommand = async () =>
+            await db.send(
+              new PutCommand({
+                TableName: TABLE_NAME,
+                Item: updatedPlant,
+              }),
+            );
+          const updatePlantResult = await processRequest(
+            updatePlantCommand,
+            req.command,
+          );
+          if (!updatePlantResult.success) {
+            return updatePlantResult;
+          }
+        }
+      }
+      const filteredPlantList = updatedPlantList.filter(
+        (item) => !plantList.some((obj) => obj.SK === item),
+      );
+      for (const plantUuid of filteredPlantList) {
+        const getPlantCommand = async () => {
+          const { Item } = await db.send(
+            new GetCommand({
+              TableName: TABLE_NAME,
+              Key: {
+                PK: `PLANT#${plantUuid}`,
+                SK: plantUuid,
+              },
+            }),
+          );
+          return Item;
+        };
+
+        const getPlantResult = await processRequest(
+          getPlantCommand,
+          req.command,
+        );
+
+        if (!getPlantResult.success) {
+          return getPlantResult;
+        }
+
+        const result = getPlantResult.data;
+        const parserResult = parseData(result, req.command, PlantSchema);
+        if (!parserResult.success) {
+          return parserResult;
+        }
+        const newPlant: PlantDatabase = {
+          ...parserResult.data,
+          GSI: zoneUuid,
+          data: {
+            ...parserResult.data.data,
+            zoneUuid: zoneUuid,
+          },
+        };
+        const createPlantCommand = async () =>
+          await db.send(
+            new PutCommand({
+              TableName: TABLE_NAME,
+              Item: newPlant,
+            }),
+          );
+        const createPlantResult = await processRequest(
+          createPlantCommand,
+          req.command,
+        );
+        if (!createPlantResult.success) {
+          return createPlantResult;
+        }
       }
       return createRequestSuccess("updateZone")(
         req.payload,
@@ -247,8 +411,8 @@ export const ZoneService = (db: DynamoDBDocumentClient) => {
       }
       const plantList = zoneUiidListResult.data;
       plantList.forEach(async (plant) => {
-        plant.GSI = "0000-0000-0000-0001";
-        plant.data.zoneUuid = "0000-0000-0000-0001";
+        plant.GSI = "00000000-0000-0000-0000-000000000001";
+        plant.data.zoneUuid = "00000000-0000-0000-0000-000000000001";
         const updatePlantCommand = async () =>
           await db.send(
             new PutCommand({

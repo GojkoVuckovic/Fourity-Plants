@@ -4,7 +4,7 @@ import {
   DelegateTaskPayload,
   ResolveCompleteRequestModalPayload,
 } from "./service/slack_interact";
-import { CreateZoneDTO, Zone } from "./service/zone";
+import { CreateZoneDTO, Zone, ZoneDTO } from "./service/zone";
 
 export type ListPayload = {
   pageSize?: number;
@@ -56,7 +56,7 @@ export type CreateZoneRequest = {
 
 export type UpdateZoneRequest = {
   command: "updateZone";
-  payload: Zone;
+  payload: ZoneDTO;
 };
 
 export type DeleteZoneRequest = {

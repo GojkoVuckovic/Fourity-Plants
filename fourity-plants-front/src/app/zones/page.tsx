@@ -10,7 +10,7 @@ interface ZoneData {
   plantUuid: string[];
 }
 
-interface Plant {
+export interface Plant {
   name: string;
   picture: string;
   waterRequirement: number;
@@ -240,6 +240,10 @@ export default function ZoneManagementPage() {
     fetchResources();
   }, [activeResource]);
 
+  const handleDeleteSuccess = () => {
+    window.location.reload();
+  };
+
   const addResourceToZone = (resource: string) => {
     if (!localZoneData) return;
 
@@ -266,6 +270,12 @@ export default function ZoneManagementPage() {
   const selectedZone = allZones.find((zone) => zone.uuid === selectedZoneId);
   const currentZoneData = localZoneData || selectedZone;
 
+  const handlePlantClick = (plant: Plant) => {
+    console.log(plant);
+    setSelectedPlant(plant);
+    setIsPlantModalOpen(true);
+  };
+
   return (
     <div className="min-h-screen py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
@@ -273,11 +283,6 @@ export default function ZoneManagementPage() {
           <h1 className="text-3xl font-extrabold text-gray-900">
             Zone Management
           </h1>
-          {notification && (
-            <div className="mt-2 p-2 bg-green-100 text-green-800 rounded">
-              {notification}
-            </div>
-          )}
           <button
             onClick={handleCreateNew}
             disabled={loading}
@@ -349,6 +354,8 @@ export default function ZoneManagementPage() {
                   onChange={(currentData) => {
                     setLocalZoneData(currentData);
                   }}
+                  onPlantClick={handlePlantClick}
+                  onDelete={handleDeleteSuccess}
                 />
               ) : (
                 <div className="bg-white p-8 rounded-lg shadow-md text-center">
@@ -416,20 +423,17 @@ export default function ZoneManagementPage() {
                       : plants.map((plant) => (
                           <div
                             key={`plant-${plant.uuid}`}
-                            className="flex items-center justify-between bg-white/50 p-2 rounded"
+                            className="flex flex-wrap items-center justify-between bg-white/50 p-2 rounded gap-2"
                           >
                             <span
-                              className="hover:underline cursor-pointer"
-                              onClick={() => {
-                                setSelectedPlant(plant);
-                                setIsPlantModalOpen(true);
-                              }}
+                              className="hover:underline cursor-pointer break-words max-w-[80%]"
+                              onClick={() => handlePlantClick(plant)}
                             >
                               {plant.uuid}
                             </span>
                             <FaPlus
                               onClick={() => addResourceToZone(plant.uuid)}
-                              className="hover:cursor-pointer"
+                              className="hover:cursor-pointer flex-shrink-0"
                             />
                           </div>
                         ))}
