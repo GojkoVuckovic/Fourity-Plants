@@ -39,6 +39,8 @@ export const ZoneCard: React.FC<ZoneCardProps> = ({
   const [localData, setLocalData] = useState<ZoneData>(initialData);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [loadingPlantUuid, setLoadingPlantUuid] = useState<string | null>(null);
+
   useEffect(() => {
     setLocalData(initialData);
   }, [initialData]);
@@ -82,24 +84,30 @@ export const ZoneCard: React.FC<ZoneCardProps> = ({
   };
 
   const handlePlantClick = async (plantUuid: string) => {
-    const response = await fetch(
-      "https://km5vtry5xcfu2xzboyytvu43i40vnzms.lambda-url.eu-central-1.on.aws/",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          command: "getPlant",
-          payload: {
-            uuid: plantUuid,
+    setLoadingPlantUuid(plantUuid);
+    try {
+      const response = await fetch(
+        "https://km5vtry5xcfu2xzboyytvu43i40vnzms.lambda-url.eu-central-1.on.aws/",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
           },
-        }),
-      },
-    );
-    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-    const plant = await response.json();
-    onPlantClick(plant.data);
+          body: JSON.stringify({
+            command: "getPlant",
+            payload: {
+              uuid: plantUuid,
+            },
+          }),
+        },
+      );
+      if (!response.ok)
+        throw new Error(`HTTP error! status: ${response.status}`);
+      const plant = await response.json();
+      onPlantClick(plant.data);
+    } finally {
+      setLoadingPlantUuid(null);
+    }
   };
 
   const handleDelete = async (zoneId: string) => {
@@ -223,11 +231,14 @@ export const ZoneCard: React.FC<ZoneCardProps> = ({
                 className="flex items-center justify-between bg-white/50 p-2 rounded"
               >
                 <span
-                  className="hover:cursor-pointer underline"
+                  className={`hover:cursor-pointer underline ${loadingPlantUuid === uuid ? "cursor-wait opacity-60" : ""}`}
                   onClick={() => handlePlantClick(uuid)}
                 >
                   {uuid}
                 </span>
+                {loadingPlantUuid === uuid && (
+                  <span className="ml-2 animate-spin inline-block w-4 h-4 border-2 border-t-transparent border-gray-500 rounded-full"></span>
+                )}
                 {isEditing && (
                   <FaDeleteLeft
                     onClick={() => removePlant(index)}

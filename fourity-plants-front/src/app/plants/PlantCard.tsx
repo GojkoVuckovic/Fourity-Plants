@@ -3,6 +3,7 @@ import { PlantProps, EditablePlantDto } from "./page";
 import React, { useState, useEffect, useRef } from "react";
 import { FaEdit } from "react-icons/fa";
 import { MdDelete, MdMenu } from "react-icons/md";
+import Image from "next/image";
 
 export const Plant: React.FC<PlantProps> = ({
   uuid,
@@ -12,8 +13,6 @@ export const Plant: React.FC<PlantProps> = ({
   lastTimeSunlit,
   waterRequirement,
   sunRequirement,
-  imageUrl,
-  imageAlt = "Plant image",
   onEdit,
   onDeleteSuccess,
   index,
@@ -22,6 +21,7 @@ export const Plant: React.FC<PlantProps> = ({
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const [imgSrc, setImgSrc] = useState(`/plants/${uuid}.webp`);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -104,19 +104,18 @@ export const Plant: React.FC<PlantProps> = ({
         </div>
       )}
 
-      {imageUrl && (
-        <div className="relative h-48 w-full">
-          <img
-            src={imageUrl}
-            alt={imageAlt}
-            className="absolute inset-0 w-full h-full object-cover"
-            onError={(e) => {
-              e.currentTarget.src = `https://placehold.co/400x200/black/ffffff?text=${encodeURIComponent(name)}`;
-            }}
-          />
-        </div>
-      )}
-
+      <div className="relative h-48 w-full">
+        <Image
+          src={imgSrc}
+          alt="NoPic"
+          fill={true}
+          className="absolute inset-0 w-full h-full object-cover"
+          onError={() => {
+            setImgSrc("/no_plant.webp");
+          }}
+          key={imgSrc}
+        />
+      </div>
       <div className="p-6 flex flex-col flex-grow relative">
         <h3 className="text-xl font-bold text-gray-900 text-center">{name}</h3>
 
@@ -177,10 +176,19 @@ export const Modal: React.FC<{
   onClose: () => void;
   plant: EditablePlantDto | null;
   onChange: (plant: EditablePlantDto) => void;
-  onConfirm: () => void;
+  onConfirm: (file: File) => void;
   isCreating?: boolean;
 }> = ({ isOpen, onClose, plant, onChange, onConfirm, isCreating = false }) => {
   const [showModalContent, setShowModalContent] = useState(false);
+  const [file, setFile] = useState<File | null>(null);
+  const [touched, setTouched] = useState<{ [key: string]: boolean }>({});
+  const [errors, setErrors] = useState<{ [key: string]: boolean }>({});
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files?.[0]) {
+      setFile(e.target.files[0]);
+    }
+  };
 
   useEffect(() => {
     if (isOpen) {
@@ -201,6 +209,10 @@ export const Modal: React.FC<{
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
   ) => {
     const { name, value } = e.target;
+    setTouched((prev) => ({ ...prev, [name]: true }));
+    let isEmpty = value === "" || value === null || value === undefined;
+    setErrors((prev) => ({ ...prev, [name]: isEmpty }));
+
     if (name === "waterRequirement" || name === "sunRequirement") {
       onChange({ ...plant, [name]: Number(value) });
     } else {
@@ -230,7 +242,28 @@ export const Modal: React.FC<{
           className="flex flex-col gap-3"
           onSubmit={(e) => {
             e.preventDefault();
-            onConfirm();
+            // Validate all fields
+            const newErrors: { [key: string]: boolean } = {
+              name: !plant.name,
+              additionalInfo: !plant.additionalInfo,
+              waterRequirement: !plant.waterRequirement,
+              sunRequirement: !plant.sunRequirement,
+              lastTimeWatered: !plant.lastTimeWatered,
+              lastTimeSunlit: !plant.lastTimeSunlit,
+              file: !file,
+            };
+            setTouched({
+              name: true,
+              additionalInfo: true,
+              waterRequirement: true,
+              sunRequirement: true,
+              lastTimeWatered: true,
+              lastTimeSunlit: true,
+              file: true,
+            });
+            setErrors(newErrors);
+            const hasError = Object.values(newErrors).some(Boolean);
+            if (!hasError && file) onConfirm(file);
           }}
         >
           <label className="flex flex-col text-left text-gray-700 font-medium">
@@ -240,9 +273,15 @@ export const Modal: React.FC<{
               name="name"
               value={plant.name}
               onChange={handleInputChange}
-              className="mt-1 bg-white/50 p-2 border rounded"
+              onBlur={() => setTouched((prev) => ({ ...prev, name: true }))}
+              className={`mt-1 bg-white/50 p-2 border rounded ${touched.name && errors.name ? "border-red-500" : ""}`}
               required
             />
+            {touched.name && errors.name && (
+              <span className="text-red-500 text-xs mt-1">
+                This field is required
+              </span>
+            )}
           </label>
           <label className="flex flex-col text-left text-gray-700 font-medium">
             Additional Info
@@ -250,9 +289,18 @@ export const Modal: React.FC<{
               name="additionalInfo"
               value={plant.additionalInfo}
               onChange={handleInputChange}
-              className="mt-1 bg-white/50 p-2 border rounded"
+              onBlur={() =>
+                setTouched((prev) => ({ ...prev, additionalInfo: true }))
+              }
+              className={`mt-1 bg-white/50 p-2 border rounded ${touched.additionalInfo && errors.additionalInfo ? "border-red-500" : ""}`}
               rows={2}
+              required
             />
+            {touched.additionalInfo && errors.additionalInfo && (
+              <span className="text-red-500 text-xs mt-1">
+                This field is required
+              </span>
+            )}
           </label>
           <label className="flex flex-col text-left text-gray-700 font-medium">
             Water Requirement (days)
@@ -261,10 +309,18 @@ export const Modal: React.FC<{
               name="waterRequirement"
               value={plant.waterRequirement}
               onChange={handleInputChange}
-              className="mt-1 bg-white/50 p-2 border rounded"
+              onBlur={() =>
+                setTouched((prev) => ({ ...prev, waterRequirement: true }))
+              }
+              className={`mt-1 bg-white/50 p-2 border rounded ${touched.waterRequirement && errors.waterRequirement ? "border-red-500" : ""}`}
               min={1}
               required
             />
+            {touched.waterRequirement && errors.waterRequirement && (
+              <span className="text-red-500 text-xs mt-1">
+                This field is required
+              </span>
+            )}
           </label>
           <label className="flex flex-col text-left text-gray-700 font-medium">
             Sun Requirement (days)
@@ -273,10 +329,18 @@ export const Modal: React.FC<{
               name="sunRequirement"
               value={plant.sunRequirement}
               onChange={handleInputChange}
-              className="mt-1 bg-white/50 p-2 border rounded"
+              onBlur={() =>
+                setTouched((prev) => ({ ...prev, sunRequirement: true }))
+              }
+              className={`mt-1 bg-white/50 p-2 border rounded ${touched.sunRequirement && errors.sunRequirement ? "border-red-500" : ""}`}
               min={1}
               required
             />
+            {touched.sunRequirement && errors.sunRequirement && (
+              <span className="text-red-500 text-xs mt-1">
+                This field is required
+              </span>
+            )}
           </label>
           <label className="flex flex-col text-left text-gray-700 font-medium">
             Last Time Watered
@@ -291,9 +355,17 @@ export const Modal: React.FC<{
               }
               max={new Date().toISOString().split("T")[0]}
               onChange={handleInputChange}
-              className="mt-1 bg-white/50 p-2 border rounded"
+              onBlur={() =>
+                setTouched((prev) => ({ ...prev, lastTimeWatered: true }))
+              }
+              className={`mt-1 bg-white/50 p-2 border rounded ${touched.lastTimeWatered && errors.lastTimeWatered ? "border-red-500" : ""}`}
               required
             />
+            {touched.lastTimeWatered && errors.lastTimeWatered && (
+              <span className="text-red-500 text-xs mt-1">
+                This field is required
+              </span>
+            )}
           </label>
           <label className="flex flex-col text-left text-gray-700 font-medium">
             Last Time Sunlit
@@ -308,29 +380,45 @@ export const Modal: React.FC<{
               }
               max={new Date().toISOString().split("T")[0]}
               onChange={handleInputChange}
-              className="mt-1 bg-white/50 p-2 border rounded"
+              onBlur={() =>
+                setTouched((prev) => ({ ...prev, lastTimeSunlit: true }))
+              }
+              className={`mt-1 bg-white/50 p-2 border rounded ${touched.lastTimeSunlit && errors.lastTimeSunlit ? "border-red-500" : ""}`}
               required
             />
+            {touched.lastTimeSunlit && errors.lastTimeSunlit && (
+              <span className="text-red-500 text-xs mt-1">
+                This field is required
+              </span>
+            )}
           </label>
           <label className="flex flex-col text-left text-gray-700 font-medium">
             Image URL
             <input
-              type="text"
-              name="imageUrl"
-              value={plant.imageUrl || ""}
-              onChange={handleInputChange}
-              className="mt-1 bg-white/50 p-2 border rounded"
+              type="file"
+              accept="image/*"
+              onChange={(e) => {
+                handleFileChange(e);
+                setTouched((prev) => ({ ...prev, file: true }));
+                setErrors((prev) => ({
+                  ...prev,
+                  file: !(e.target.files && e.target.files[0]),
+                }));
+              }}
+              onBlur={() => setTouched((prev) => ({ ...prev, file: true }))}
+              className={`mt-2 block w-full text-sm text-gray-800
+                      file:mr-4 file:py-2 file:px-4
+                      file:rounded-md file:border-0
+                      file:text-sm file:font-semibold
+                      file:bg-greenish-grey file:text-gray-800 hover:cursor-pointer
+                      hover:file:bg-blue-100 ${touched.file && errors.file ? "border border-red-500" : ""}`}
+              required
             />
-          </label>
-          <label className="flex flex-col text-left text-gray-700 font-medium">
-            Image Alt
-            <input
-              type="text"
-              name="imageAlt"
-              value={plant.imageAlt || ""}
-              onChange={handleInputChange}
-              className="mt-1 bg-white/50 p-2 border rounded"
-            />
+            {touched.file && errors.file && (
+              <span className="text-red-500 text-xs mt-1">
+                This field is required
+              </span>
+            )}
           </label>
           <div className="flex justify-end gap-2 mt-4">
             <button
@@ -342,6 +430,7 @@ export const Modal: React.FC<{
             </button>
             <button
               type="submit"
+              disabled={!file}
               className="px-4 py-2 bg-greenish-grey text-gray-800 rounded hover:bg-greenish-grey-darker focus:outline-none"
             >
               {isCreating ? "Create" : "Update"}

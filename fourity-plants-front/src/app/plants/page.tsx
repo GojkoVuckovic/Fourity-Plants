@@ -8,8 +8,6 @@ export interface PlantDto {
   uuid: string;
   name: string;
   additionalInfo: string;
-  imageUrl?: string;
-  imageAlt?: string;
   sunRequirement: number;
   waterRequirement: number;
   lastTimeWatered: string;
@@ -149,8 +147,6 @@ export default function PlantsPage() {
       sunRequirement: 7,
       lastTimeWatered: new Date().toDateString(),
       lastTimeSunlit: new Date().toDateString(),
-      imageUrl: "",
-      imageAlt: "Plant image",
       zoneUuid: "",
     });
     setIsCreating(true);
@@ -168,7 +164,7 @@ export default function PlantsPage() {
     setEditingPlant(plant);
   };
 
-  const handleModalConfirm = async () => {
+  const handleModalConfirm = async (file: File) => {
     if (!editingPlant) return;
 
     try {
@@ -186,7 +182,6 @@ export default function PlantsPage() {
           sunRequirement: editingPlant.sunRequirement,
           lastTimeWatered: new Date(editingPlant.lastTimeWatered).toISOString(),
           lastTimeSunlit: new Date(editingPlant.lastTimeSunlit).toISOString(),
-          picture: editingPlant.imageUrl,
         },
       };
 
@@ -204,14 +199,30 @@ export default function PlantsPage() {
       if (!response.ok)
         throw new Error(`HTTP error! status: ${response.status}`);
 
+      let plantUuid = editingPlant.uuid;
       if (isCreating) {
-        window.location.reload(); // Refresh page after creation
-      } else if (editingIndex !== null) {
-        const updated = [...allPlants];
-        updated[editingIndex] = editingPlant;
-        setAllPlants(updated);
-        handleModalClose();
+        const data = await response.json();
+        plantUuid = data.uuid || data.data?.uuid;
       }
+
+      if (file && plantUuid) {
+        const formData = new FormData();
+        const ext = file.name.split(".").pop() || "png";
+        const renamedFile = new File([file], `${plantUuid}.${ext}`, {
+          type: file.type,
+        });
+        formData.append("image", renamedFile);
+        formData.append("uuid", plantUuid);
+
+        const uploadRes = await fetch("/api/upload", {
+          method: "POST",
+          body: formData,
+        });
+
+        if (!uploadRes.ok) throw new Error("Image upload failed");
+      }
+
+      window.location.reload();
     } catch (error) {
       console.error(
         `Failed to ${isCreating ? "create" : "update"} plant:`,

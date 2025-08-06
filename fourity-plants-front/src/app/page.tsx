@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { PlantRecordTable } from "./plant-records/PlantRecordTable";
+import Image from "next/image";
 
 export const entityFields = [
   { label: "UUID", value: "uuid" },

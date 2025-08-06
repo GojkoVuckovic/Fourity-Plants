@@ -32,7 +32,6 @@ export const PlantDataSchema = z.object({
   zoneUuid: z.string().uuid().nullable().optional(),
   name: z.string().min(1),
   additionalInfo: z.string().min(1).nullable().optional(),
-  picture: z.string().min(1),
   waterRequirement: z.number().min(1),
   sunRequirement: z.number().min(1),
   lastTimeWatered: z.string().datetime(),
@@ -89,7 +88,7 @@ export const plantService = (db: DynamoDBDocumentClient) => {
     },
     async createPlant(
       req: CreatePlantRequest,
-    ): Promise<RequestResult<"createPlant", CreatePlantDTO>> {
+    ): Promise<RequestResult<"createPlant", Plant>> {
       if (req.payload.zoneUuid) {
         const getZoneCommand = async () => {
           const { Item } = await db.send(
@@ -129,7 +128,6 @@ export const plantService = (db: DynamoDBDocumentClient) => {
           additionalInfo: parserResult.data.additionalInfo,
           waterRequirement: parserResult.data.waterRequirement,
           sunRequirement: parserResult.data.sunRequirement,
-          picture: parserResult.data.picture,
           lastTimeWatered: parserResult.data.lastTimeWatered,
           lastTimeSunlit: parserResult.data.lastTimeSunlit,
         },
@@ -149,7 +147,10 @@ export const plantService = (db: DynamoDBDocumentClient) => {
         return createPlantResult;
       }
       return createRequestSuccess(req.command)(
-        parserResult.data,
+        {
+          ...parserResult.data,
+          uuid: plantUuid,
+        },
         createPlantResult.code,
         createPlantResult.message,
       );
@@ -207,7 +208,6 @@ export const plantService = (db: DynamoDBDocumentClient) => {
           additionalInfo: req.payload.additionalInfo,
           waterRequirement: req.payload.waterRequirement,
           sunRequirement: req.payload.sunRequirement,
-          picture: req.payload.picture,
           lastTimeWatered: req.payload.lastTimeWatered,
           lastTimeSunlit: req.payload.lastTimeSunlit,
         },
