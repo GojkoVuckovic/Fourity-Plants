@@ -1,5 +1,5 @@
 import {
-  APIGatewayProxyEvent,
+  APIGatewayProxyEventV2,
   APIGatewayProxyResult,
   Context,
 } from "aws-lambda";
@@ -7,17 +7,45 @@ import { ProcessRequest } from "./service/index";
 import { successResponse, errorResponse } from "./response";
 import { createRequestFail, createRequestSuccess } from "./requests";
 import { Req } from "./types";
+import { Resource } from "sst";
+import crypto from "crypto";
 
 const BodyParseFail = createRequestFail("body_parse");
 
+const verifyRequest = (event: APIGatewayProxyEventV2): boolean => {
+  const hmacSecret = Resource.FRONT_SIGNING_SECRET.value;
+  if (!hmacSecret || !event.body) return false;
+
+  const headers = Object.fromEntries(
+    Object.entries(event.headers).map(([k, v]) => [k.toLowerCase(), v]),
+  );
+  const signature = headers["x-hmac-signature"];
+  if (!signature) return false;
+
+  const computedSignature = crypto
+    .createHmac("sha256", hmacSecret)
+    .update(event.body)
+    .digest("hex");
+  return computedSignature === signature;
+};
+
 export const ResolveRequest = (
-  event: APIGatewayProxyEvent,
+  event: APIGatewayProxyEventV2,
 ): [Req | null, null | APIGatewayProxyResult] => {
+  let request: Req;
   if (!event.body) {
     const fail = BodyParseFail(400, "Request body is required");
     return [null, errorResponse(fail)];
   }
-  let request: Req;
+  if (event.requestContext?.http) {
+    if (!verifyRequest(event)) {
+      const fail = createRequestFail("verification")(
+        400,
+        "Invalid request signature",
+      );
+      return [null, errorResponse(fail)];
+    }
+  }
   try {
     request = JSON.parse(event.body);
   } catch (parseError: any) {
@@ -28,7 +56,7 @@ export const ResolveRequest = (
 };
 
 export const handler = async (
-  event: APIGatewayProxyEvent,
+  event: APIGatewayProxyEventV2,
   context: Context,
 ): Promise<APIGatewayProxyResult> => {
   try {

@@ -5,8 +5,6 @@ import { FaDeleteLeft } from "react-icons/fa6";
 import { Plant } from "./page";
 import { MdDelete } from "react-icons/md";
 
-const API_ENDPOINT =
-  "https://km5vtry5xcfu2xzboyytvu43i40vnzms.lambda-url.eu-central-1.on.aws/";
 interface ZoneData {
   uuid: string;
   name: string;
@@ -86,21 +84,22 @@ export const ZoneCard: React.FC<ZoneCardProps> = ({
   const handlePlantClick = async (plantUuid: string) => {
     setLoadingPlantUuid(plantUuid);
     try {
-      const response = await fetch(
-        "https://km5vtry5xcfu2xzboyytvu43i40vnzms.lambda-url.eu-central-1.on.aws/",
-        {
+      const response = await fetch("/api/bff", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
+          headers: { "Content-Type": "application/json" },
+          body: {
             command: "getPlant",
             payload: {
               uuid: plantUuid,
             },
-          }),
-        },
-      );
+          },
+        }),
+      });
       if (!response.ok)
         throw new Error(`HTTP error! status: ${response.status}`);
       const plant = await response.json();
@@ -112,15 +111,19 @@ export const ZoneCard: React.FC<ZoneCardProps> = ({
 
   const handleDelete = async (zoneId: string) => {
     try {
-      const response = await fetch(API_ENDPOINT, {
+      const response = await fetch("/api/bff", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          command: "deleteZone",
-          payload: {
-            uuid: zoneId,
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: {
+            command: "deleteZone",
+            payload: {
+              uuid: zoneId,
+            },
           },
         }),
       });

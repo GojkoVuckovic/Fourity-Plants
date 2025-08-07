@@ -18,7 +18,8 @@ const docClient = DynamoDBDocumentClient.from(client, {
     removeUndefinedValues: true,
   },
 });
-const slackClient = new WebClient(Resource.SLACK_BOT_TOKEN.value);
+const slackBotToken = Resource.SLACK_BOT_TOKEN.value || "slackBotToken";
+const slackClient = new WebClient(slackBotToken);
 const plantServiceInstance = plant.plantService(docClient);
 const plantRecordServiceInstance = plant_record.plantRecordService(docClient);
 const employeeServiceInstance = employee.employeeService(slackClient);

@@ -1,30 +1,30 @@
 import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
+import { loadEnvConfig } from "@next/env";
 
-// Replace with your secret key
-const HMAC_SECRET = process.env.HMAC_SECRET || "your-secret-key";
+loadEnvConfig(process.cwd());
 
 export async function POST(req: NextRequest) {
   try {
-    const { url, method = "POST", headers = {}, body } = await req.json();
+    const { method = "POST", headers = {}, body } = await req.json();
+    const url =
+      "https://km5vtry5xcfu2xzboyytvu43i40vnzms.lambda-url.eu-central-1.on.aws/";
+    console.log(body);
 
-    // Prepare body for signing and sending
     const bodyString = typeof body === "string" ? body : JSON.stringify(body);
-
-    // Create HMAC signature
+    const hmacSecret = process.env.HMAC_SECRET;
+    if (!hmacSecret) throw new Error("HMAC_SECRET is not defined");
     const signature = crypto
-      .createHmac("sha256", HMAC_SECRET)
+      .createHmac("sha256", hmacSecret)
       .update(bodyString)
       .digest("hex");
 
-    // Add signature to headers
     const proxiedHeaders = {
       ...headers,
       "X-HMAC-Signature": signature,
       "Content-Type": "application/json",
     };
 
-    // Proxy the request
     const proxiedResponse = await fetch(url, {
       method,
       headers: proxiedHeaders,

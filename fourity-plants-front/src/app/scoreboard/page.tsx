@@ -20,18 +20,19 @@ const ScoreboardPage: React.FC = () => {
       setLoading(true);
       setError(null);
 
-      const response = await fetch(
-        "https://km5vtry5xcfu2xzboyytvu43i40vnzms.lambda-url.eu-central-1.on.aws/",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            command: "getScoreboard",
-          }),
+      const response = await fetch("/api/bff", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
         },
-      );
+        body: JSON.stringify({
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: {
+            command: "getScoreboard",
+          },
+        }),
+      });
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);

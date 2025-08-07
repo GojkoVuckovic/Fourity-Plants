@@ -57,19 +57,20 @@ export default function PlantsPage() {
 
     setLoading(true);
     try {
-      const response = await fetch(
-        "https://km5vtry5xcfu2xzboyytvu43i40vnzms.lambda-url.eu-central-1.on.aws/",
-        {
+      const response = await fetch("/api/bff", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
+          headers: { "Content-Type": "application/json" },
+          body: {
             command: "getPlantList",
             payload: { pageSize: CARDS_PER_LOAD, startKey: currentStartKey },
-          }),
-        },
-      );
+          },
+        }),
+      });
 
       if (!response.ok)
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -185,16 +186,19 @@ export default function PlantsPage() {
         },
       };
 
-      const response = await fetch(
-        "https://km5vtry5xcfu2xzboyytvu43i40vnzms.lambda-url.eu-central-1.on.aws/",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(payload),
+      const response = await fetch("/api/bff", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
         },
-      );
+        body: JSON.stringify({
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: {
+            payload,
+          },
+        }),
+      });
 
       if (!response.ok)
         throw new Error(`HTTP error! status: ${response.status}`);

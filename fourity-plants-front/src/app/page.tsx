@@ -43,19 +43,19 @@ export default function Home() {
         setLoading(true);
         setError(null);
 
-        // Template for API request - replace with your actual endpoint and options
-        const response = await fetch(
-          "https://km5vtry5xcfu2xzboyytvu43i40vnzms.lambda-url.eu-central-1.on.aws/",
-          {
-            method: "POST", // or 'POST' if needed
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              command: "getSchedule",
-            }), // Uncomment and add request body if needed
+        const response = await fetch("/api/bff", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
           },
-        );
+          body: JSON.stringify({
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: {
+              command: "getSchedule",
+            },
+          }),
+        });
 
         const result = await response.json();
 

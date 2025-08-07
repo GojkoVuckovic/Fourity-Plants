@@ -47,8 +47,7 @@ export default function ZoneManagementPage() {
   const [plants, setPlants] = useState<Plant[]>([]);
 
   const CARDS_PER_LOAD = 5;
-  const API_ENDPOINT =
-    "https://km5vtry5xcfu2xzboyytvu43i40vnzms.lambda-url.eu-central-1.on.aws/";
+  const API_ENDPOINT = "/api/bff";
 
   const loadingRef = useRef(loading);
   const hasMoreRef = useRef(hasMore);
@@ -78,8 +77,12 @@ export default function ZoneManagementPage() {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            command: "getZoneList",
-            payload: { pageSize: CARDS_PER_LOAD, startKey: currentStartKey },
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: {
+              command: "getZoneList",
+              payload: { pageSize: CARDS_PER_LOAD, startKey: currentStartKey },
+            },
           }),
         });
 
@@ -152,7 +155,11 @@ export default function ZoneManagementPage() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: { payload },
+        }),
       });
 
       if (!response.ok)
@@ -212,10 +219,14 @@ export default function ZoneManagementPage() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          command:
-            activeResource === "employees"
-              ? "getEmployeeNames"
-              : "getPlantListWithNoZone",
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: {
+            command:
+              activeResource === "employees"
+                ? "getEmployeeNames"
+                : "getPlantListWithNoZone",
+          },
         }),
       });
       console.log(response);
