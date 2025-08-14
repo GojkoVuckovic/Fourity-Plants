@@ -3,16 +3,6 @@ import { useState, useEffect } from "react";
 import { PlantRecordTable } from "./plant-records/PlantRecordTable";
 import Image from "next/image";
 
-export const entityFields = [
-  { label: "UUID", value: "uuid" },
-  { label: "Plant UUID", value: "plantUuid" },
-  { label: "Employee Name", value: "employeeName" },
-  { label: "Is Water", value: "isWater" },
-  { label: "Is Sun", value: "isSun" },
-  { label: "Date", value: "date" },
-  { label: "Resolved", value: "resolved" },
-];
-
 export type PlantRecordDto = {
   uuid: string;
   plantUuid: string;

@@ -140,26 +140,24 @@ export default function ZoneManagementPage() {
   const handleSave = async (updatedData: EditableZoneData) => {
     try {
       setLoading(true);
-      const payload = {
-        command: isCreating ? "createZone" : "updateZone",
-        payload: {
-          ...(isCreating ? {} : { uuid: updatedData.uuid }),
-          name: updatedData.name,
-          employees: updatedData.employees,
-          plantUuid: updatedData.plantUuid,
+      const requestBody = {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: {
+          command: isCreating ? "createZone" : "updateZone",
+          payload: {
+            ...(isCreating ? {} : { uuid: updatedData.uuid }),
+            name: updatedData.name,
+            employees: updatedData.employees,
+            plantUuid: updatedData.plantUuid,
+          },
         },
       };
 
       const response = await fetch(API_ENDPOINT, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: { payload },
-        }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(requestBody),
       });
 
       if (!response.ok)
@@ -229,7 +227,6 @@ export default function ZoneManagementPage() {
           },
         }),
       });
-      console.log(response);
       if (!response.ok) throw new Error("Failed to fetch resources");
 
       const data = await response.json();
@@ -259,7 +256,6 @@ export default function ZoneManagementPage() {
     if (!localZoneData) return;
 
     setLocalZoneData((prev) => {
-      console.log(prev);
       if (!prev) return prev;
 
       const updatedData = { ...prev };
@@ -282,7 +278,6 @@ export default function ZoneManagementPage() {
   const currentZoneData = localZoneData || selectedZone;
 
   const handlePlantClick = (plant: Plant) => {
-    console.log(plant);
     setSelectedPlant(plant);
     setIsPlantModalOpen(true);
   };

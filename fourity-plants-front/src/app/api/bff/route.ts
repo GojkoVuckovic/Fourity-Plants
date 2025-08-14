@@ -9,7 +9,6 @@ export async function POST(req: NextRequest) {
     const { method = "POST", headers = {}, body } = await req.json();
     const url =
       "https://km5vtry5xcfu2xzboyytvu43i40vnzms.lambda-url.eu-central-1.on.aws/";
-    console.log(body);
 
     const bodyString = typeof body === "string" ? body : JSON.stringify(body);
     const hmacSecret = process.env.HMAC_SECRET;

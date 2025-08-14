@@ -162,12 +162,13 @@ export default function PlantsPage() {
   };
 
   const handleModalChange = (plant: EditablePlantDto) => {
+    console.log(plant);
     setEditingPlant(plant);
   };
 
-  const handleModalConfirm = async (file: File) => {
+  const handleModalConfirm = async (file?: File) => {
+    console.log(editingPlant);
     if (!editingPlant) return;
-
     try {
       setLoading(true);
       const payload = {
@@ -195,7 +196,7 @@ export default function PlantsPage() {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: {
-            payload,
+            ...payload,
           },
         }),
       });

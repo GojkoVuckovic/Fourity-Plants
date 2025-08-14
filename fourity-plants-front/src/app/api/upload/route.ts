@@ -8,7 +8,7 @@ export async function POST(request: Request) {
     const formData = await request.formData();
     const file = formData.get("image") as File | null;
     const uuid = formData.get("uuid") as string | null;
-
+    console.log(file);
     if (!file) {
       return NextResponse.json({ error: "No file uploaded" }, { status: 400 });
     }
@@ -36,6 +36,7 @@ export async function POST(request: Request) {
     }
 
     const buffer = Buffer.from(await file.arrayBuffer());
+    console.log(buffer);
 
     let webpBuffer;
     let quality = 80;
@@ -57,6 +58,7 @@ export async function POST(request: Request) {
         else break;
       }
     } catch (err) {
+      console.log(err);
       return NextResponse.json(
         { error: "Failed to process image" },
         { status: 500 },
@@ -65,8 +67,10 @@ export async function POST(request: Request) {
 
     const fileName = `${uuid}.webp`;
     const filePath = path.join(process.cwd(), "public", "plants", fileName);
+    console.log(filePath);
 
     await writeFile(filePath, webpBuffer);
+    console.log("write file");
 
     return NextResponse.json({
       success: true,

@@ -21,7 +21,7 @@ export const Plant: React.FC<PlantProps> = ({
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
-  const [imgSrc, setImgSrc] = useState(`/plants/${uuid}.webp`);
+  const [imgSrc, setImgSrc] = useState(`/api/public/${uuid}.webp`);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -177,17 +177,19 @@ export const Modal: React.FC<{
   onClose: () => void;
   plant: EditablePlantDto | null;
   onChange: (plant: EditablePlantDto) => void;
-  onConfirm: (file: File) => void;
+  onConfirm: (file?: File) => void;
   isCreating?: boolean;
 }> = ({ isOpen, onClose, plant, onChange, onConfirm, isCreating = false }) => {
   const [showModalContent, setShowModalContent] = useState(false);
-  const [file, setFile] = useState<File | null>(null);
+  const [file, setFile] = useState<File | undefined>(undefined);
   const [touched, setTouched] = useState<{ [key: string]: boolean }>({});
   const [errors, setErrors] = useState<{ [key: string]: boolean }>({});
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files?.[0]) {
       setFile(e.target.files[0]);
+    } else {
+      setFile(undefined);
     }
   };
 
@@ -251,7 +253,6 @@ export const Modal: React.FC<{
               sunRequirement: !plant.sunRequirement,
               lastTimeWatered: !plant.lastTimeWatered,
               lastTimeSunlit: !plant.lastTimeSunlit,
-              file: !file,
             };
             setTouched({
               name: true,
@@ -260,11 +261,10 @@ export const Modal: React.FC<{
               sunRequirement: true,
               lastTimeWatered: true,
               lastTimeSunlit: true,
-              file: true,
             });
             setErrors(newErrors);
             const hasError = Object.values(newErrors).some(Boolean);
-            if (!hasError && file) onConfirm(file);
+            if (!hasError) onConfirm(file);
           }}
         >
           <label className="flex flex-col text-left text-gray-700 font-medium">
@@ -400,20 +400,13 @@ export const Modal: React.FC<{
               accept="image/*"
               onChange={(e) => {
                 handleFileChange(e);
-                setTouched((prev) => ({ ...prev, file: true }));
-                setErrors((prev) => ({
-                  ...prev,
-                  file: !(e.target.files && e.target.files[0]),
-                }));
               }}
-              onBlur={() => setTouched((prev) => ({ ...prev, file: true }))}
               className={`mt-2 block w-full text-sm text-gray-800
                       file:mr-4 file:py-2 file:px-4
                       file:rounded-md file:border-0
                       file:text-sm file:font-semibold
                       file:bg-greenish-grey file:text-gray-800 hover:cursor-pointer
                       hover:file:bg-blue-100 ${touched.file && errors.file ? "border border-red-500" : ""}`}
-              required
             />
             {touched.file && errors.file && (
               <span className="text-red-500 text-xs mt-1">
@@ -431,7 +424,6 @@ export const Modal: React.FC<{
             </button>
             <button
               type="submit"
-              disabled={!file}
               className="px-4 py-2 bg-greenish-grey text-gray-800 rounded hover:bg-greenish-grey-darker focus:outline-none"
             >
               {isCreating ? "Create" : "Update"}
