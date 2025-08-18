@@ -10,6 +10,10 @@ declare module "sst" {
       "type": "sst.aws.Function"
       "url": string
     }
+    "FRONT_SIGNING_SECRET": {
+      "type": "sst.sst.Secret"
+      "value": string
+    }
     "SLACK_BOT_TOKEN": {
       "type": "sst.sst.Secret"
       "value": string

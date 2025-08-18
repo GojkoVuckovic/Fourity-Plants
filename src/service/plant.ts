@@ -11,6 +11,7 @@ import {
   PutCommand,
   DeleteCommand,
   DynamoDBDocumentClient,
+  QueryCommand,
 } from "@aws-sdk/lib-dynamodb";
 import { createRequestSuccess, RequestResult } from "../requests";
 import {
@@ -21,6 +22,7 @@ import {
   GetPlantListRequest,
   ListResponse,
   QueryResult,
+  GetPlantListWithNoZoneRequest,
 } from "../types";
 
 import { v4 as uuidv4 } from "uuid";
@@ -30,7 +32,6 @@ export const PlantDataSchema = z.object({
   zoneUuid: z.string().uuid().nullable().optional(),
   name: z.string().min(1),
   additionalInfo: z.string().min(1).nullable().optional(),
-  picture: z.string().min(1),
   waterRequirement: z.number().min(1),
   sunRequirement: z.number().min(1),
   lastTimeWatered: z.string().datetime(),
@@ -87,7 +88,7 @@ export const plantService = (db: DynamoDBDocumentClient) => {
     },
     async createPlant(
       req: CreatePlantRequest,
-    ): Promise<RequestResult<"createPlant", CreatePlantDTO>> {
+    ): Promise<RequestResult<"createPlant", Plant>> {
       if (req.payload.zoneUuid) {
         const getZoneCommand = async () => {
           const { Item } = await db.send(
@@ -116,15 +117,17 @@ export const plantService = (db: DynamoDBDocumentClient) => {
         PK: `PLANT#${plantUuid}`,
         SK: plantUuid,
         type: "PLANT",
-        GSI: parserResult.data.zoneUuid || "",
+        GSI:
+          parserResult.data.zoneUuid || "00000000-0000-0000-0000-000000000001",
         GSI2: plantUuid,
         data: {
           name: parserResult.data.name,
-          zoneUuid: parserResult.data.zoneUuid,
+          zoneUuid:
+            parserResult.data.zoneUuid ||
+            "00000000-0000-0000-0000-000000000001",
           additionalInfo: parserResult.data.additionalInfo,
           waterRequirement: parserResult.data.waterRequirement,
           sunRequirement: parserResult.data.sunRequirement,
-          picture: parserResult.data.picture,
           lastTimeWatered: parserResult.data.lastTimeWatered,
           lastTimeSunlit: parserResult.data.lastTimeSunlit,
         },
@@ -144,7 +147,10 @@ export const plantService = (db: DynamoDBDocumentClient) => {
         return createPlantResult;
       }
       return createRequestSuccess(req.command)(
-        parserResult.data,
+        {
+          ...parserResult.data,
+          uuid: plantUuid,
+        },
         createPlantResult.code,
         createPlantResult.message,
       );
@@ -194,7 +200,7 @@ export const plantService = (db: DynamoDBDocumentClient) => {
         PK: `PLANT#${req.payload.uuid}`,
         SK: req.payload.uuid,
         type: "PLANT",
-        GSI: req.payload.zoneUuid || "",
+        GSI: req.payload.zoneUuid || "No zone",
         GSI2: req.payload.uuid,
         data: {
           name: req.payload.name,
@@ -202,7 +208,6 @@ export const plantService = (db: DynamoDBDocumentClient) => {
           additionalInfo: req.payload.additionalInfo,
           waterRequirement: req.payload.waterRequirement,
           sunRequirement: req.payload.sunRequirement,
-          picture: req.payload.picture,
           lastTimeWatered: req.payload.lastTimeWatered,
           lastTimeSunlit: req.payload.lastTimeSunlit,
         },
@@ -275,6 +280,7 @@ export const plantService = (db: DynamoDBDocumentClient) => {
         req.command,
       );
       if (!getPlantListResult.success) return getPlantListResult;
+      console.log(getPlantListResult.data.LastEvaluatedKey);
       const parsedData = getPlantListResult.data.Items;
       const parseResult = parseData(
         parsedData,
@@ -287,6 +293,49 @@ export const plantService = (db: DynamoDBDocumentClient) => {
         getPlantListResult.data.LastEvaluatedKey,
       );
       return createRequestSuccess(req.command)(listResponse, 200, "");
+    },
+    async getPlantListWithNoZone(
+      req: GetPlantListWithNoZoneRequest,
+    ): Promise<RequestResult<"getPlantListWithNoZone", Array<Plant>>> {
+      const getPlantListCommand = async () => {
+        const { Items } = await db.send(
+          new QueryCommand({
+            TableName: TABLE_NAME,
+            IndexName: "TypeIndex",
+            KeyConditionExpression: "#typeAttr = :typeValue",
+            ExpressionAttributeNames: {
+              "#typeAttr": "type",
+            },
+            ExpressionAttributeValues: {
+              ":typeValue": "PLANT",
+            },
+          }),
+        );
+        return Items;
+      };
+      const getPlantListResult = await processRequest(
+        getPlantListCommand,
+        "getPlantListWithNoZone",
+      );
+      if (!getPlantListResult.success) {
+        return getPlantListResult;
+      }
+      const zoneUuidData = getPlantListResult.data;
+      const plantListResult = parseData(
+        zoneUuidData,
+        "getPlantListWithNoZone",
+        PlantDtoArraySchema,
+      );
+      if (!plantListResult.success) {
+        return plantListResult;
+      }
+      console.log(plantListResult);
+      const plantListWithNoZone = plantListResult.data.filter(
+        (plant) =>
+          !plant.zoneUuid ||
+          plant.zoneUuid === "00000000-0000-0000-0000-000000000001",
+      );
+      return createRequestSuccess(req.command)(plantListWithNoZone, 200, "");
     },
   };
 };

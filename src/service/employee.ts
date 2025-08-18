@@ -3,6 +3,8 @@ import { GetEmployeeNamesRequest } from "../types";
 import { WebClient } from "@slack/web-api";
 import { processRequest } from "./utils";
 
+const CHANNEL_ID = process.env.CHANNEL_ID || "";
+
 export const employeeService = (slack: WebClient) => {
   return {
     async getEmployeeNames(
@@ -10,7 +12,7 @@ export const employeeService = (slack: WebClient) => {
     ): Promise<RequestResult<"getEmployeeNames", string[]>> {
       const employeeNames: string[] = [];
       const membersResponse = async () => {
-        return await slack.conversations.members(req.payload);
+        return await slack.conversations.members({ channel: CHANNEL_ID });
       };
       const getMembersResult = await processRequest(
         membersResponse,

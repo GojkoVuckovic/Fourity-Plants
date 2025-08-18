@@ -12,15 +12,11 @@ export const successResponse = <OP extends string, T>(
     (typeof successResult.data === "object" &&
       Object.keys(successResult.data).length === 0);
 
-  console.log("isEmpty:", isEmpty);
-
   const body = isEmpty
     ? ""
     : JSON.stringify({
         data: successResult.data,
       });
-
-  console.log("response body:", body);
 
   return {
     statusCode: statusCode,

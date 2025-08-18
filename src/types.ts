@@ -4,7 +4,7 @@ import {
   DelegateTaskPayload,
   ResolveCompleteRequestModalPayload,
 } from "./service/slack_interact";
-import { CreateZoneDTO, Zone } from "./service/zone";
+import { CreateZoneDTO, Zone, ZoneDTO } from "./service/zone";
 
 export type ListPayload = {
   pageSize?: number;
@@ -56,7 +56,7 @@ export type CreateZoneRequest = {
 
 export type UpdateZoneRequest = {
   command: "updateZone";
-  payload: Zone;
+  payload: ZoneDTO;
 };
 
 export type DeleteZoneRequest = {
@@ -84,11 +84,14 @@ export type CreateScheduleRequest = {
   payload?: never;
 };
 
+export type GetScheduleRequest = {
+  command: "getSchedule";
+  payload?: never;
+};
+
 export type GetEmployeeNamesRequest = {
   command: "getEmployeeNames";
-  payload: {
-    channel: string;
-  };
+  payload?: never;
 };
 
 export type OpenCompleteRequestModalRequest = {
@@ -111,6 +114,16 @@ export type ShowScoreboardRequest = {
   payload?: never;
 };
 
+export type GetScoreboardRequest = {
+  command: "getScoreboard";
+  payload?: never;
+};
+
+export type GetPlantListWithNoZoneRequest = {
+  command: "getPlantListWithNoZone";
+  payload?: never;
+};
+
 export type SlackRequest =
   | OpenCompleteRequestModalRequest
   | DelegateTaskRequest
@@ -125,7 +138,10 @@ export type ListRequests =
 export type GetRequests =
   | GetEmployeeNamesRequest
   | GetPlantRequest
-  | GetZoneRequest;
+  | GetZoneRequest
+  | GetScheduleRequest
+  | GetScoreboardRequest
+  | GetPlantListWithNoZoneRequest;
 
 export type CreateRequests =
   | CreatePlantRequest

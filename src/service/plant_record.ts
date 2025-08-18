@@ -176,7 +176,6 @@ export const plantRecordService = (db: DynamoDBDocumentClient) => {
           additionalInfo: plant.data.additionalInfo,
           waterRequirement: plant.data.waterRequirement,
           sunRequirement: plant.data.sunRequirement,
-          picture: plant.data.picture,
           lastTimeWatered: plantRecord.data.isWater
             ? isoString
             : plant.data.lastTimeWatered,

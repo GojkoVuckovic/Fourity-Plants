@@ -20,6 +20,7 @@ export default $config({
     dotenv.config();
     const secret = new sst.Secret("SLACK_BOT_TOKEN");
     const signingSecret = new sst.Secret("SLACK_SIGNING_SECRET");
+    const frontSigningSecret = new sst.Secret("FRONT_SIGNING_SECRET");
     // const image = new awsx.ecr.Image("image", {
     // 	repositoryUrl:
     // 		"351931932329.dkr.ecr.eu-central-1.amazonaws.com/fourity/fourity-plants",
@@ -67,7 +68,7 @@ export default $config({
     });
     const dispatcher = new sst.aws.Function("Dispatcher", {
       handler: "./src/dispatcher.handler",
-      link: [table, secret],
+      link: [table, secret, frontSigningSecret],
       url: true,
       environment: {
         TABLE_NAME: table.name,
@@ -82,6 +83,16 @@ export default $config({
       environment: {
         TABLE_NAME: table.name,
         CHANNEL_ID: "C0926UCSKPW",
+      },
+    });
+
+    const scheduleCron = new sst.aws.Cron("ScheduleTrigger", {
+      schedule: "cron(0 6 * * ? *)",
+      function: dispatcher.arn,
+      event: {
+        body: JSON.stringify({
+          command: "getScoreboard",
+        }),
       },
     });
   },

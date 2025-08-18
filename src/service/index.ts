@@ -18,7 +18,8 @@ const docClient = DynamoDBDocumentClient.from(client, {
     removeUndefinedValues: true,
   },
 });
-const slackClient = new WebClient(Resource.SLACK_BOT_TOKEN.value);
+const slackBotToken = Resource.SLACK_BOT_TOKEN.value || "slackBotToken";
+const slackClient = new WebClient(slackBotToken);
 const plantServiceInstance = plant.plantService(docClient);
 const plantRecordServiceInstance = plant_record.plantRecordService(docClient);
 const employeeServiceInstance = employee.employeeService(slackClient);
@@ -47,6 +48,8 @@ export const ProcessRequest = async (data: Req) => {
       return plantServiceInstance.getPlant(data);
     case "getPlantList":
       return plantServiceInstance.getPlantList({ ...data, ...paginationData });
+    case "getPlantListWithNoZone":
+      return plantServiceInstance.getPlantListWithNoZone(data);
     case "createZone":
       return zoneServiceInstance.createZone(data);
     case "updateZone":
@@ -66,6 +69,10 @@ export const ProcessRequest = async (data: Req) => {
       return scheduleServiceInstance.createSchedule(data);
     case "getEmployeeNames":
       return employeeServiceInstance.getEmployeeNames(data);
+    case "getSchedule":
+      return scheduleServiceInstance.getSchedule(data);
+    case "getScoreboard":
+      return scoreboardServiceInstance.getScoreboard();
     default:
       return assertUnreachable("Unhandled command")(400, `Unhandled command`);
   }
@@ -74,7 +81,6 @@ export const ProcessRequest = async (data: Req) => {
 export const processSlackRequest = async (payload: SlackRequest) => {
   switch (payload.command) {
     case "complete-task": {
-      console.log(payload);
       return slackInteractServiceInstance.openCompleteTaskModal(payload);
     }
     case "delegate-task":
