@@ -91,7 +91,7 @@ export default $config({
       function: dispatcher.arn,
       event: {
         body: JSON.stringify({
-          command: "getScoreboard",
+          command: "createSchedule",
         }),
       },
     });

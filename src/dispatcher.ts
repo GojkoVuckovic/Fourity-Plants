@@ -60,6 +60,7 @@ export const handler = async (
   context: Context,
 ): Promise<APIGatewayProxyResult> => {
   try {
+    console.log(event);
     const [request, error] = ResolveRequest(event);
     if (request) {
       const result = await ProcessRequest(request);
