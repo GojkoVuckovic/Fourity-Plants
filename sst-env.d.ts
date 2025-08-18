@@ -5,6 +5,28 @@
 
 declare module "sst" {
   export interface Resource {
+    "Dispatcher": {
+      "name": string
+      "type": "sst.aws.Function"
+      "url": string
+    }
+    "SLACK_BOT_TOKEN": {
+      "type": "sst.sst.Secret"
+      "value": string
+    }
+    "SLACK_SIGNING_SECRET": {
+      "type": "sst.sst.Secret"
+      "value": string
+    }
+    "Slack": {
+      "name": string
+      "type": "sst.aws.Function"
+      "url": string
+    }
+    "Table": {
+      "name": string
+      "type": "sst.aws.Dynamo"
+    }
   }
 }
 /// <reference path="sst-env.d.ts" />

@@ -10,7 +10,7 @@ import { Req } from "./types";
 
 const BodyParseFail = createRequestFail("body_parse");
 
-const ResolveRequest = (
+export const ResolveRequest = (
   event: APIGatewayProxyEvent,
 ): [Req | null, null | APIGatewayProxyResult] => {
   if (!event.body) {

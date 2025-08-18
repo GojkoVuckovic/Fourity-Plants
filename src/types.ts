@@ -1,4 +1,9 @@
 import { Plant, CreatePlantDTO } from "./service/plant";
+import {
+  OpenCompleteTaskModalPayload,
+  DelegateTaskPayload,
+  ResolveCompleteRequestModalPayload,
+} from "./service/slack_interact";
 import { CreateZoneDTO, Zone } from "./service/zone";
 
 export type ListPayload = {
@@ -69,11 +74,6 @@ export type GetZoneListRequest = {
   payload: ListPayload;
 };
 
-export type UpdatePlantRecordRequest = {
-  command: "updatePlantRecord";
-  payload: { uuid: string; additionalInfo?: string };
-};
-
 export type GetPlantRecordListRequest = {
   command: "getPlantRecordList";
   payload: ListPayload;
@@ -84,22 +84,38 @@ export type CreateScheduleRequest = {
   payload?: never;
 };
 
-export type GetScheduleRequest = {
-  command: "getSchedule";
-  payload?: never;
-};
-
-export type GetScoreboardRequest = {
-  command: "getScoreboard";
-  payload?: never;
-};
-
 export type GetEmployeeNamesRequest = {
   command: "getEmployeeNames";
   payload: {
     channel: string;
   };
 };
+
+export type OpenCompleteRequestModalRequest = {
+  command: "complete-task";
+  payload: OpenCompleteTaskModalPayload;
+};
+
+export type DelegateTaskRequest = {
+  command: "delegate-task";
+  payload: DelegateTaskPayload;
+};
+
+export type ResolveCompleteRequestModalRequest = {
+  command: "complete-task-modal";
+  payload: ResolveCompleteRequestModalPayload;
+};
+
+export type ShowScoreboardRequest = {
+  command: "/scoreboard";
+  payload?: never;
+};
+
+export type SlackRequest =
+  | OpenCompleteRequestModalRequest
+  | DelegateTaskRequest
+  | ResolveCompleteRequestModalRequest
+  | ShowScoreboardRequest;
 
 export type ListRequests =
   | GetPlantListRequest
@@ -109,19 +125,14 @@ export type ListRequests =
 export type GetRequests =
   | GetEmployeeNamesRequest
   | GetPlantRequest
-  | GetZoneRequest
-  | GetScheduleRequest
-  | GetScoreboardRequest;
+  | GetZoneRequest;
 
 export type CreateRequests =
   | CreatePlantRequest
   | CreateZoneRequest
   | CreateScheduleRequest;
 
-export type PutRequests =
-  | UpdatePlantRequest
-  | UpdateZoneRequest
-  | UpdatePlantRecordRequest;
+export type PutRequests = UpdatePlantRequest | UpdateZoneRequest;
 
 export type DeleteRequests = DeletePlantRequest | DeleteZoneRequest;
 
