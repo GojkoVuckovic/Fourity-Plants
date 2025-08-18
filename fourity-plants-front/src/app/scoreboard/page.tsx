@@ -1,5 +1,18 @@
 "use client";
 import { useCallback, useState, useEffect } from "react";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Trophy, Medal, Award, RefreshCw, AlertCircle } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface ScoreboardData {
   [employee_name: string]: number;
@@ -52,7 +65,6 @@ const ScoreboardPage: React.FC = () => {
         );
       }
 
-      // Updated validation to match actual API response format
       if (!outerData || !outerData.data || typeof outerData.data !== "object") {
         throw new Error(
           "Invalid data structure received from API. Expected format: { data: { [employee_name: string]: number } }",
@@ -83,76 +95,131 @@ const ScoreboardPage: React.FC = () => {
 
   const sortedScores = [...employeeScores].sort((a, b) => b.score - a.score);
 
-  return (
-    <div className={`min-h-screen text-white p-6 md:p-10`}>
-      <main className="container rounded-xl bg-dirty-white text-black mx-auto py-8">
-        <h1 className={`text-4xl md:text-5xl font-bold text-center mb-10`}>
-          Company Leaderboard
-        </h1>
+  const getRankIcon = (rank: number) => {
+    switch (rank) {
+      case 1:
+        return <Trophy className="h-5 w-5 text-yellow-500" />;
+      case 2:
+        return <Medal className="h-5 w-5 text-gray-400" />;
+      case 3:
+        return <Award className="h-5 w-5 text-amber-600" />;
+      default:
+        return null;
+    }
+  };
 
-        {loading ? (
-          <div className="text-center py-8">Loading scoreboard...</div>
-        ) : error ? (
-          <div className="text-center py-8 text-red-400">
-            Error: {error}
-            <div className="mt-4">
-              <button
-                onClick={fetchScoreboard}
-                className="px-4 py-2 bg-blue-500 rounded hover:bg-blue-600"
-              >
-                Retry
-              </button>
+  const getRankBadge = (rank: number) => {
+    if (rank <= 3) {
+      const variants = {
+        1: "default",
+        2: "secondary",
+        3: "outline",
+      } as const;
+      return (
+        <Badge variant={variants[rank as keyof typeof variants]}>{rank}</Badge>
+      );
+    }
+    return <span className="text-muted-foreground font-medium">{rank}</span>;
+  };
+
+  return (
+    <div className="container mx-auto p-6 space-y-6">
+      <div className="text-center space-y-2">
+        <h1 className="text-4xl md:text-5xl font-bold">Company Leaderboard</h1>
+      </div>
+
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle className="flex items-center gap-2">
+            <Trophy className="h-6 w-6" />
+            Rankings
+          </CardTitle>
+          <Button
+            onClick={fetchScoreboard}
+            disabled={loading}
+            variant="outline"
+            size="sm"
+          >
+            <RefreshCw
+              className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`}
+            />
+            Refresh
+          </Button>
+        </CardHeader>
+        <CardContent>
+          {loading ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="flex items-center gap-2">
+                <RefreshCw className="h-5 w-5 animate-spin" />
+                <span>Loading scoreboard...</span>
+              </div>
             </div>
-            <div className="mt-4 text-sm">
-              <p>Received data: {JSON.stringify(scoreboardData)}</p>
+          ) : error ? (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription className="flex flex-col gap-3">
+                <span>Error: {error}</span>
+                <Button
+                  onClick={fetchScoreboard}
+                  variant="outline"
+                  size="sm"
+                  className="w-fit"
+                >
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Try Again
+                </Button>
+              </AlertDescription>
+            </Alert>
+          ) : (
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-20">Rank</TableHead>
+                    <TableHead>Employee</TableHead>
+                    <TableHead className="text-right">Score</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {sortedScores.length > 0 ? (
+                    sortedScores.map((employee, index) => {
+                      const rank = index + 1;
+                      return (
+                        <TableRow
+                          key={employee.name}
+                          className="hover:bg-muted/50"
+                        >
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              {getRankIcon(rank)}
+                              {getRankBadge(rank)}
+                            </div>
+                          </TableCell>
+                          <TableCell className="font-medium">
+                            {employee.name}
+                          </TableCell>
+                          <TableCell className="text-right font-bold">
+                            {employee.score.toLocaleString()}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })
+                  ) : (
+                    <TableRow>
+                      <TableCell
+                        colSpan={3}
+                        className="text-center py-12 text-muted-foreground"
+                      >
+                        No scores to display yet.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
             </div>
-          </div>
-        ) : (
-          <div className="p-4 md:p-6">
-            <table className="min-w-full text-center">
-              <thead className="bg-white/20 border-b border-gray-400">
-                <tr>
-                  <th className="py-3 px-2 md:px-6 text-xs md:text-sm font-medium uppercase tracking-wider text-black">
-                    Rank
-                  </th>
-                  <th className="py-3 px-2 md:px-6 text-xs md:text-sm font-medium uppercase tracking-wider text-black">
-                    Employee
-                  </th>
-                  <th className="py-3 px-2 md:px-6 text-xs md:text-sm font-medium uppercase tracking-wider text-black">
-                    Score
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-white/20">
-                {sortedScores.length > 0 ? (
-                  sortedScores.map((employee, index) => (
-                    <tr
-                      key={employee.name}
-                      className="hover:bg-white/10 transition-colors duration-200"
-                    >
-                      <td className="py-4 px-2 md:px-6 whitespace-nowrap text-sm md:text-base">
-                        {index + 1}
-                      </td>
-                      <td className="py-4 px-2 md:px-6 whitespace-nowrap text-sm md:text-base font-medium">
-                        {employee.name}
-                      </td>
-                      <td className="py-4 px-2 md:px-6 whitespace-nowrap text-sm md:text-base font-bold">
-                        {employee.score}
-                      </td>
-                    </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan={3} className="py-8 text-lg text-white/70">
-                      No scores to display.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </main>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 };

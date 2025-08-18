@@ -1,5 +1,28 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
+import {
+  Table,
+  TableHeader,
+  TableRow,
+  TableHead,
+  TableBody,
+  TableCell,
+} from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Card } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AlertCircle } from "lucide-react";
+import Image from "next/image";
 
 const entityFields = [
   { label: "UUID", value: "uuid" },
@@ -20,6 +43,7 @@ interface PlantRecordTableProps {
 }
 
 interface PlantDto {
+  uuid: string;
   name: string;
   additionalInfo: string;
   imageUrl?: string;
@@ -64,6 +88,10 @@ export const PlantRecordTable: React.FC<PlantRecordTableProps> = ({
       });
 
       if (!response.ok) {
+        // Check for 500 status
+        if (response.status === 500) {
+          throw new Error("No plant available");
+        }
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
@@ -85,6 +113,8 @@ export const PlantRecordTable: React.FC<PlantRecordTableProps> = ({
 
   const handleOpenModal = async (plantUuid: string) => {
     setIsModalOpen(true);
+    setSelectedPlant(null);
+    setModalError(null);
     await fetchPlantDetails(plantUuid);
   };
 
@@ -121,157 +151,152 @@ export const PlantRecordTable: React.FC<PlantRecordTableProps> = ({
   }, [hasMore, loading, onLoadMore]);
 
   return (
-    <div
-      className="w-full overflow-x-auto h-[70vh] overflow-y-auto"
-      ref={tableRef}
-    >
+    <ScrollArea className="h-[70vh] w-full rounded-md border" ref={tableRef}>
       {loading && plantRecords.length === 0 ? (
-        <div className="p-4 text-center text-gray-800">
-          Loading plant records...
+        <div className="p-4 text-center">
+          <Skeleton className="h-4 w-[200px] mx-auto" />
         </div>
       ) : plantRecords.length === 0 ? (
-        <div className="p-4 text-center text-gray-800">
-          No plant records available.
-        </div>
+        <div className="p-4 text-center">No plant records available.</div>
       ) : (
-        <table className="min-w-full bg-dirty-white rounded-lg overflow-hidden text-center">
-          <thead className="bg-transparent border-b border-gray-600 sticky top-0">
-            <tr>
+        <Table>
+          <TableHeader className="sticky top-0 bg-background">
+            <TableRow>
               {entityFields.map((field) => (
-                <th
-                  key={field.value}
-                  scope="col"
-                  className="py-3 px-6 text-xs font-medium text-gray-800 uppercase tracking-wider"
-                >
+                <TableHead key={field.value} className="text-center">
                   {field.label}
-                </th>
+                </TableHead>
               ))}
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-600">
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {plantRecords.map((plantRecord) => (
-              <tr key={`${plantRecord.uuid}-${plantRecord.date}`}>
+              <TableRow key={`${plantRecord.uuid}-${plantRecord.date}`}>
                 {entityFields.map((field) => (
-                  <td
+                  <TableCell
                     key={`${plantRecord.uuid}-${field.value}`}
-                    className="py-4 px-6 whitespace-nowrap text-sm text-gray-800 bg-transparent"
+                    className="text-center"
                   >
                     {field.value === "plantUuid" ? (
-                      <button
+                      <Button
+                        variant="link"
                         onClick={() => handleOpenModal(plantRecord.plantUuid)}
-                        className="text-gray-800 underline hover:cursor-pointer focus:outline-none"
+                        className="p-0 h-auto"
                       >
                         {plantRecord.plantUuid}
-                      </button>
+                      </Button>
                     ) : field.value === "isWater" ||
                       field.value === "isSun" ||
                       field.value === "resolved" ? (
-                      <span
-                        className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                          plantRecord[field.value]
-                            ? "bg-green-100 text-green-800"
-                            : "bg-red-100 text-red-800"
-                        }`}
+                      <Badge
+                        variant={
+                          plantRecord[field.value] ? "default" : "destructive"
+                        }
                       >
                         {plantRecord[field.value] ? "Yes" : "No"}
-                      </span>
+                      </Badge>
                     ) : field.value === "date" ? (
                       new Date(plantRecord.date).toLocaleDateString()
                     ) : (
                       plantRecord[field.value as keyof PlantRecordDto] || "N/A"
                     )}
-                  </td>
+                  </TableCell>
                 ))}
-              </tr>
+              </TableRow>
             ))}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       )}
 
       {loading && plantRecords.length > 0 && (
-        <div className="p-4 text-center text-gray-800">
-          Loading more records...
+        <div className="p-4 text-center">
+          <Skeleton className="h-4 w-[200px] mx-auto" />
         </div>
       )}
 
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div
-            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-            onClick={handleCloseModal}
-          />
+      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+        <DialogContent className="sm:max-w-[625px] max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Plant Details</DialogTitle>
+          </DialogHeader>
 
-          {/* Modal container */}
-          <div className="relative bg-dirty-white rounded-lg p-6 max-w-xl w-full z-10 max-h-[90vh] overflow-y-auto">
-            <h2 className="text-xl font-bold mb-4">Plant Details</h2>
+          {modalLoading && !selectedPlant && (
+            <div className="space-y-4">
+              <Skeleton className="h-48 w-full" />
+              <div className="grid grid-cols-2 gap-4">
+                {[...Array(6)].map((_, i) => (
+                  <div key={i} className="space-y-2">
+                    <Skeleton className="h-4 w-[100px]" />
+                    <Skeleton className="h-4 w-[150px]" />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
-            {modalLoading && !selectedPlant && (
-              <div className="text-center py-4">Loading plant details...</div>
-            )}
-            {selectedPlant && (
-              <div className="space-y-4">
-                <div className="flex justify-center mb-4">
-                  <div className="w-full h-48 bg-gray-100 rounded-lg overflow-hidden flex items-center justify-center">
-                    <img
-                      src={selectedPlant.imageUrl}
-                      alt={selectedPlant.imageAlt || selectedPlant.name}
-                      className="h-full w-full object-contain"
-                      onError={(e) => {
-                        e.currentTarget.src = `https://placehold.co/400x200/black/ffffff?text=${encodeURIComponent(selectedPlant.name)}`;
-                        e.currentTarget.className =
-                          "h-full w-full object-cover";
-                      }}
-                    />
-                  </div>
-                </div>
+          {modalError && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                {modalError.includes("No plant available")
+                  ? "No plant available"
+                  : "Error loading plant details"}
+              </AlertDescription>
+            </Alert>
+          )}
 
-                {/* Plant details grid */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <h3 className="font-semibold">Name</h3>
-                    <p>{selectedPlant.name}</p>
-                  </div>
-                  <div>
-                    <h3 className="font-semibold">Move to sun</h3>
-                    <p>Every {selectedPlant.sunRequirement} days</p>
-                  </div>
-                  <div>
-                    <h3 className="font-semibold">Water Requirement</h3>
-                    <p>Every {selectedPlant.waterRequirement} days</p>
-                  </div>
-                  <div>
-                    <h3 className="font-semibold">Last Watered</h3>
-                    <p>
-                      {new Date(selectedPlant.lastTimeWatered).toDateString()}
-                    </p>
-                  </div>
-                  <div>
-                    <h3 className="font-semibold">Last Sunlit</h3>
-                    <p>
-                      {new Date(selectedPlant.lastTimeSunlit).toDateString()}
-                    </p>
-                  </div>
+          {selectedPlant && !modalError && (
+            <div className="space-y-4">
+              <Card className="relative aspect-video overflow-hidden">
+                <Image
+                  src={
+                    `/api/public/${selectedPlant.uuid}.webp` || "/no_plant.webp"
+                  }
+                  alt="This plant does not have a picture :("
+                  fill={true}
+                  className="absolute inset-0 w-full h-full object-cover"
+                  key={`/${selectedPlant.uuid}.webp`}
+                />
+              </Card>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <h3 className="font-semibold">Name</h3>
+                  <p>{selectedPlant.name}</p>
                 </div>
                 <div>
-                  <h3 className="font-semibold">Additional Info</h3>
-                  <p className="whitespace-pre-line">
-                    {selectedPlant.additionalInfo}
+                  <h3 className="font-semibold">Move to sun</h3>
+                  <p>Every {selectedPlant.sunRequirement} days</p>
+                </div>
+                <div>
+                  <h3 className="font-semibold">Water Requirement</h3>
+                  <p>Every {selectedPlant.waterRequirement} days</p>
+                </div>
+                <div>
+                  <h3 className="font-semibold">Last Watered</h3>
+                  <p>
+                    {new Date(selectedPlant.lastTimeWatered).toDateString()}
                   </p>
                 </div>
+                <div>
+                  <h3 className="font-semibold">Last Sunlit</h3>
+                  <p>{new Date(selectedPlant.lastTimeSunlit).toDateString()}</p>
+                </div>
               </div>
-            )}
 
-            {/* Close button */}
-            <button
-              onClick={handleCloseModal}
-              className="mt-6 px-4 py-2 bg-coral text-gray-800 rounded hover:bg-coral-warning hover:cursor-pointer w-full"
-            >
-              Close
-            </button>
-          </div>
-        </div>
-      )}
-    </div>
+              <Separator />
+
+              <div>
+                <h3 className="font-semibold">Additional Info</h3>
+                <p className="whitespace-pre-line">
+                  {selectedPlant.additionalInfo}
+                </p>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+    </ScrollArea>
   );
 };
 

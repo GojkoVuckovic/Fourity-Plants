@@ -2,8 +2,10 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { PlantRecordTable } from "./PlantRecordTable";
 import { PlantRecordDto } from "./PlantRecordTable";
+import { RefreshCw } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 
-export default function Home() {
+export default function PlantRecordsPage() {
   const [plantRecords, setPlantRecords] = useState<PlantRecordDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -35,7 +37,9 @@ export default function Home() {
         const result = await response.json();
 
         if (result.data && Array.isArray(result.data.data)) {
-          setPlantRecords(result.data.data);
+          setPlantRecords((prev) =>
+            startKey ? [...prev, ...result.data.data] : result.data.data,
+          );
           setLastKey(result.data.lastKey || null);
           setHasMore(!!result.data.lastKey);
         } else {
@@ -53,11 +57,7 @@ export default function Home() {
     [],
   );
 
-  const didFetch = useRef(false);
-
   useEffect(() => {
-    if (didFetch.current) return;
-    didFetch.current = true;
     fetchPlantRecords();
   }, [fetchPlantRecords]);
 
@@ -68,10 +68,22 @@ export default function Home() {
   }, [lastKey, loading, hasMore, fetchPlantRecords]);
 
   return (
-    <div className="min-h-screen">
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-8">Plant Records</h1>
-        <div className="overflow-hidden">
+    <div className="container mx-auto p-6 space-y-6">
+      <div className="text-center space-y-2">
+        <h1 className="text-4xl md:text-5xl font-bold">Plant Records</h1>
+      </div>
+
+      <div className="rounded-lg border h-[70vh] overflow-hidden">
+        {loading && plantRecords.length === 0 ? (
+          <div className="h-full flex items-center justify-center bg-muted/50">
+            <div className="flex flex-col items-center gap-4">
+              <RefreshCw className="h-8 w-8 animate-spin text-primary" />
+              <span className="text-lg font-medium">
+                Loading plant records...
+              </span>
+            </div>
+          </div>
+        ) : (
           <PlantRecordTable
             plantRecords={plantRecords}
             loading={loading}
@@ -79,7 +91,7 @@ export default function Home() {
             onLoadMore={handleLoadMore}
             hasMore={hasMore}
           />
-        </div>
+        )}
       </div>
     </div>
   );
